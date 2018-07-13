@@ -1,0 +1,26 @@
+{
+    "name": "tareq1988/pocker",
+    "description": "A docker PHP development server",
+    "type": "project",
+    "authors": [
+        {
+            "name": "Tareq Hasan",
+            "email": "tareq@wedevs.com"
+        }
+    ],
+    "autoload": {
+        "files": [
+            "cli/includes/helpers.php"
+        ],
+        "psr-4": {
+            "Megh\\": "cli/Megh/"
+        }
+    },
+    "require": {
+        "php": ">=5.6",
+        "mnapoli/silly": "^1.7",
+        "symfony/process": "^4.0",
+        "symfony/yaml": "^4.2@dev"
+    },
+    "minimum-stability": "dev"
+}
