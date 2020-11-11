@@ -4,7 +4,7 @@
 /**
  * Load correct autoloader depending on install location.
  */
-if ( file_exists( __DIR__ . '/../vendor/autoload.php' ) ) {
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
     require __DIR__ . '/../vendor/autoload.php';
 } else {
     require __DIR__ . '/../../../autoload.php';
@@ -20,32 +20,28 @@ $version = '1.0';
 
 $app = new Application('Megh Docker client', $version);
 
-$app->command('check', function() {
+$app->command('check', function () {
     $docker = new Docker();
     $docker->flightCheck();
 });
 
-$app->command('proxy-start', function() {
+$app->command('proxy-start', function () {
     $docker = new Docker();
     $docker->initProxy();
 });
 
-$app->command('install', function() {
-
+$app->command('install', function () {
     $conf = new Configuration();
     $conf->install();
 
-    info( "Megh installed" );
-
+    info("Megh installed");
 })->descriptions('Install Megh');
 
 $app->command('create site [--type=] [--php=] [--root=]', function ($site, $type, $php, $root) {
+    $sites = new Site($site);
+    $sites->create($type, $php, $root);
 
-    $sites = new Site( $site );
-    $sites->create( $type, $php, $root );
-
-    info( "Site $site created" );
-
+    info("Site $site created");
 })->descriptions('Create a new site', [
     'site'   => 'The url of the site',
     '--type' => 'Type of the site.',
@@ -59,31 +55,25 @@ $app->command('create site [--type=] [--php=] [--root=]', function ($site, $type
 ]);
 
 $app->command('enable name', function ($name) {
-
-    $site = new Site( $name );
+    $site = new Site($name);
     $site->enable();
 
-    info( "Site $name enabled" );
-
+    info("Site $name enabled");
 })->descriptions('Enable the site.');
 
 $app->command('disable name', function ($name) {
-
-    $site = new Site( $name );
+    $site = new Site($name);
     $site->disable();
 
-    info( "Site $name disabled" );
-
+    info("Site $name disabled");
 })->descriptions('Disable the site.');
 
 
 $app->command('delete name', function ($name) {
-
-    $site = new Site( $name );
+    $site = new Site($name);
     $site->delete();
 
-    info( "Site $name deleted" );
-
+    info("Site $name deleted");
 })->descriptions('Delete the site.');
 
 $app->run();

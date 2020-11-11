@@ -2,6 +2,7 @@
 namespace Megh;
 
 use Symfony\Component\Yaml\Yaml;
+use Exception;
 
 /**
  * Site
@@ -38,7 +39,12 @@ class Site
      */
     private $root;
 
-    function __construct( $sitename )
+    /**
+     * Initialize the class
+     *
+     * @param string $sitename
+     */
+    public function __construct($sitename)
     {
         $this->sitename = $sitename;
     }
@@ -46,9 +52,13 @@ class Site
     /**
      * Create a site
      *
+     * @param string $type
+     * @param string $php
+     * @param string $root
+     *
      * @return void
      */
-    public function create( $type, $php, $root )
+    public function create($type, $php, $root)
     {
         $this->type = $type;
         $this->php  = $php;
@@ -58,7 +68,7 @@ class Site
         $this->enable();
         $this->addHost();
 
-        (new Configuration())->addSite( $this->sitename, ['something', 'other'] );
+        (new Configuration())->addSite($this->sitename, ['something', 'other']);
     }
 
     /**
@@ -72,7 +82,7 @@ class Site
         $this->deleteHost();
         $this->deleteFolder();
 
-        (new Configuration())->removeSite( $this->sitename );
+        (new Configuration())->removeSite($this->sitename);
     }
 
     /**
@@ -86,40 +96,50 @@ class Site
         $this->generateDockerCompose();
     }
 
+    /**
+     * Copy the configs and creates initial dirs.
+     *
+     * @return void
+     */
     private function copyFiles()
     {
-        output( 'Copying files' );
+        output('Copying files');
 
         $files   = new Filesystem();
         $confDir = __DIR__ . '/../../configs';
         $siteDir = Configuration::sitePath() . '/' . $this->sitename;
 
-        $files->ensureDirExists( $siteDir, user() );
-        $files->ensureDirExists( $siteDir . '/app', user() );
-        $files->ensureDirExists( $siteDir . '/conf', user() );
-        $files->ensureDirExists( $siteDir . '/data', user() );
-        $files->ensureDirExists( $siteDir . '/data/logs', user() );
-        $files->ensureDirExists( $siteDir . '/data/mysql', user() );
-        $files->ensureDirExists( $siteDir . '/data/backups', user() );
-        $files->ensureDirExists( $siteDir . '/data/nginx-cache', user() );
+        $files->ensureDirExists($siteDir, user());
+        $files->ensureDirExists($siteDir . '/app', user());
+        $files->ensureDirExists($siteDir . '/conf', user());
+        $files->ensureDirExists($siteDir . '/data', user());
+        $files->ensureDirExists($siteDir . '/data/logs', user());
+        $files->ensureDirExists($siteDir . '/data/mysql', user());
+        $files->ensureDirExists($siteDir . '/data/backups', user());
+        $files->ensureDirExists($siteDir . '/data/nginx-cache', user());
 
         // nginx conf
-        $files->copy( $confDir . '/.env.example', $siteDir . '/.env' );
-        $files->copyDir( $confDir . '/default/config', $siteDir . '/conf' );
+        $files->copy($confDir . '/.env.example', $siteDir . '/.env');
+        $files->copyDir($confDir . '/default/config', $siteDir . '/conf');
 
         // replace nginx hostname
         $nginxConf = $siteDir . '/conf/nginx/default.conf';
-        $nginxCont = $files->get( $nginxConf );
-        $nginxCont = str_replace( 'NGINX_HOST', $this->sitename, $nginxCont );
-        $files->put( $nginxConf, $nginxCont );
+        $nginxCont = $files->get($nginxConf);
+        $nginxCont = str_replace('NGINX_HOST', $this->sitename, $nginxCont);
+        $files->put($nginxConf, $nginxCont);
 
         // default index.php
-        $files->put( $siteDir . '/app/index.php', '<?php phpinfo();' );
+        $files->put($siteDir . '/app/index.php', '<?php phpinfo();');
     }
 
+    /**
+     * Generate a `docker-composer.yml` file
+     *
+     * @return void
+     */
     private function generateDockerCompose()
     {
-        output( 'Generating docker-compose.yml' );
+        output('Generating docker-compose.yml');
 
         $files   = new Filesystem();
         $siteDir = Configuration::sitePath() . '/' . $this->sitename;
@@ -185,8 +205,8 @@ class Site
         //     ]
         // ];
 
-        $yaml = Yaml::dump( $config, 4, 2 );
-        $files->put( $siteDir . '/docker-compose.yml', $yaml );
+        $yaml = Yaml::dump($config, 4, 2);
+        $files->put($siteDir . '/docker-compose.yml', $yaml);
     }
 
     /**
@@ -199,18 +219,16 @@ class Site
         $docker = new Docker();
 
         try {
+            output('Creating network: ' . $this->sitename);
+            $docker->createNetwork($this->sitename);
 
-            output( 'Creating network: ' . $this->sitename );
-            $docker->createNetwork( $this->sitename );
+            output('Connecting "' . $this->sitename . '" network to "nginx-proxy"');
+            $docker->connectNetwork($this->sitename);
 
-            output( 'Connecting "' . $this->sitename . '" network to "nginx-proxy"' );
-            $docker->connectNetwork( $this->sitename );
-
-            output( 'Running docker-compose up -d' );
-            $docker->composeUp( $this->sitename );
-
+            output('Running docker-compose up -d');
+            $docker->composeUp($this->sitename);
         } catch (Exception $e) {
-            warning( $e->getMessage() );
+            warning($e->getMessage());
         }
     }
 
@@ -224,18 +242,16 @@ class Site
         $docker = new Docker();
 
         try {
+            output('Taking down docker-compose');
+            $docker->composeDown($this->sitename);
 
-            output( 'Taking down docker-compose' );
-            $docker->composeDown( $this->sitename );
+            output('Disconnecting from "nginx-proxy" network');
+            $docker->disconnectNetwork($this->sitename);
 
-            output( 'Disconnecting from "nginx-proxy" network' );
-            $docker->disconnectNetwork( $this->sitename );
-
-            output( 'Removing the network: ' . $this->sitename );
-            $docker->removeNetwork( $this->sitename );
-
-        } catch (Exception $e) {
-            warning( $e->getMessage() );
+            output('Removing the network: ' . $this->sitename);
+            $docker->removeNetwork($this->sitename);
+        } catch (\Exception $e) {
+            warning($e->getMessage());
         }
     }
 
@@ -250,41 +266,41 @@ class Site
         $line       = "\n127.0.0.1\t$this->sitename";
 
         $filesystem = new Filesystem();
-        $content    = $filesystem->get( $path );
+        $content    = $filesystem->get($path);
 
-        if ( ! preg_match( "/\s+$this->sitename\$/m", $content ) ) {
+        if (! preg_match("/\s+$this->sitename\$/m", $content)) {
             // $filesystem->append( $path, $line );
             $cli = new CommandLine();
-            $cli->run( 'echo "' . $line . '" | sudo tee -a ' . $path );
+            $cli->run('echo "' . $line . '" | sudo tee -a ' . $path);
 
-            info( 'Host entry successfully added.' );
+            info('Host entry successfully added.');
         } else {
-            warning( 'Host entry already exists. Skipped.' );
+            warning('Host entry already exists. Skipped.');
         }
     }
 
     private function deleteHost()
     {
-        output( 'Deleting Hosts file entry' );
+        output('Deleting Hosts file entry');
         $path       = '/etc/hosts';
         $line       = "127.0.0.1\t$this->sitename";
 
         $filesystem = new Filesystem();
-        $content    = $filesystem->get( $path );
+        $content    = $filesystem->get($path);
 
-        if ( preg_match( "/\s+$this->sitename\$/m", $content ) ) {
+        if (preg_match("/\s+$this->sitename\$/m", $content)) {
             $cli = new CommandLine();
-            $cli->run( 'sudo sed -i "" "/^' . $line . '/d" ' . $path );
+            $cli->run('sudo sed -i "" "/^' . $line . '/d" ' . $path);
         }
     }
 
     private function deleteFolder()
     {
-        output( 'Deleting site folder' );
+        output('Deleting site folder');
 
         $siteDir = Configuration::sitePath() . '/' . $this->sitename;
 
         $cli = new CommandLine();
-        $cli->run( 'rm -rf ' . $siteDir );
+        $cli->run('rm -rf ' . $siteDir);
     }
 }

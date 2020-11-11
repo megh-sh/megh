@@ -12,9 +12,9 @@ class CommandLine
      * @param  string  $command
      * @return void
      */
-    function quietly($command)
+    public function quietly($command)
     {
-        $this->runCommand( $command . ' > /dev/null 2>&1' );
+        $this->runCommand($command . ' > /dev/null 2>&1');
     }
 
     /**
@@ -23,9 +23,9 @@ class CommandLine
      * @param  string  $command
      * @return void
      */
-    function quietlyAsUser($command)
+    public function quietlyAsUser($command)
     {
-        $this->quietly( 'sudo -u ' . user() . ' ' . $command . ' > /dev/null 2>&1' );
+        $this->quietly('sudo -u ' . user() . ' ' . $command . ' > /dev/null 2>&1');
     }
 
     /**
@@ -35,7 +35,7 @@ class CommandLine
      * @param  callable $onError
      * @return string
      */
-    function run($command, callable $onError = null)
+    public function run($command, callable $onError = null)
     {
         return $this->runCommand($command, $onError);
     }
@@ -47,9 +47,9 @@ class CommandLine
      * @param  callable $onError
      * @return string
      */
-    function runAsUser($command, callable $onError = null)
+    public function runAsUser($command, callable $onError = null)
     {
-        return $this->runCommand( 'sudo -u ' . user() . ' ' . $command, $onError );
+        return $this->runCommand('sudo -u ' . user() . ' ' . $command, $onError);
     }
 
     /**
@@ -59,18 +59,19 @@ class CommandLine
      * @param  callable $onError
      * @return string
      */
-    function runCommand($command, callable $onError = null)
+    public function runCommand($command, callable $onError = null)
     {
         $processOutput = '';
-        $onError       = $onError ?: function () {};
+        $onError       = $onError ?: function () {
+        };
         $process       = new Process($command);
 
         $process->setTimeout(null)->run(function ($type, $line) use (&$processOutput) {
             $processOutput .= $line;
         });
 
-        if ( $process->getExitCode() > 0 ) {
-            $onError( $process->getExitCode(), $processOutput );
+        if ($process->getExitCode() > 0) {
+            $onError($process->getExitCode(), $processOutput);
         }
 
         return $processOutput;

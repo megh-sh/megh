@@ -8,7 +8,8 @@ class Configuration
 {
     private $files;
 
-    function __construct() {
+    public function __construct()
+    {
         $this->files = new Filesystem();
     }
 
@@ -22,34 +23,35 @@ class Configuration
         $this->initDocker();
     }
 
-    public function initDocker() {
-        output( 'Initializing docker nginx-proxy' );
+    public function initDocker()
+    {
+        output('Initializing docker nginx-proxy');
 
         (new Docker())->initProxy();
     }
 
-    function createConfigurationDirectory()
+    public function createConfigurationDirectory()
     {
-        $this->files->ensureDirExists( MEGH_HOME_PATH, user() );
+        $this->files->ensureDirExists(MEGH_HOME_PATH, user());
     }
 
-    function createSitesDirectory()
+    public function createSitesDirectory()
     {
-        $this->files->ensureDirExists( self::sitePath(), user() );
+        $this->files->ensureDirExists(self::sitePath(), user());
     }
 
-    function createNginxConfigurationDirectory()
+    public function createNginxConfigurationDirectory()
     {
-        $this->files->ensureDirExists( MEGH_HOME_PATH . '/nginx/certs', user() );
-        $this->files->ensureDirExists( MEGH_HOME_PATH . '/nginx/conf.d', user() );
-        $this->files->ensureDirExists( MEGH_HOME_PATH . '/nginx/dhparam', user() );
-        $this->files->ensureDirExists( MEGH_HOME_PATH . '/nginx/htpasswd', user() );
-        $this->files->ensureDirExists( MEGH_HOME_PATH . '/nginx/vhost.d', user() );
+        $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/certs', user());
+        $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/conf.d', user());
+        $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/dhparam', user());
+        $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/htpasswd', user());
+        $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/vhost.d', user());
     }
 
-    function writeBaseConfiguration()
+    public function writeBaseConfiguration()
     {
-        if ( ! $this->files->exists($this->path())) {
+        if (! $this->files->exists($this->path())) {
             $this->write([
                 'sites' => []
             ]);
@@ -63,7 +65,7 @@ class Configuration
      * @param  array  $info
      * @return void
      */
-    function addSite($site, $info = [])
+    public function addSite($site, $info = [])
     {
         $this->write(tap($this->read(), function (&$config) use ($site, $info) {
             $config['sites'][$site] = $info;
@@ -76,10 +78,10 @@ class Configuration
      * @param  string  $path
      * @return void
      */
-    function removeSite($site)
+    public function removeSite($site)
     {
         $this->write(tap($this->read(), function (&$config) use ($site) {
-            unset( $config['sites'][$site] );
+            unset($config['sites'][$site]);
         }));
     }
 
@@ -88,9 +90,9 @@ class Configuration
      *
      * @return array
      */
-    function read()
+    public function read()
     {
-        return json_decode( $this->files->get( $this->path() ), true);
+        return json_decode($this->files->get($this->path()), true);
     }
 
     /**
@@ -100,11 +102,11 @@ class Configuration
      * @param  mixed  $value
      * @return array
      */
-    function updateKey($key, $value)
+    public function updateKey($key, $value)
     {
         return tap($this->read(), function (&$config) use ($key, $value) {
             $config[$key] = $value;
-            $this->write( $config );
+            $this->write($config);
         });
     }
 
@@ -114,11 +116,12 @@ class Configuration
      * @param  array  $config
      * @return void
      */
-    function write($config)
+    public function write($config)
     {
-        $this->files->putAsUser( $this->path(), json_encode(
-            $config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
-        ) . PHP_EOL );
+        $this->files->putAsUser($this->path(), json_encode(
+            $config,
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+        ) . PHP_EOL);
     }
 
     private function path()
