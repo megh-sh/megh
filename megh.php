@@ -4,15 +4,18 @@
 /**
  * Load correct autoloader depending on install location.
  */
-if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
-    require __DIR__ . '/../vendor/autoload.php';
+if (file_exists(__DIR__.'/../../autoload.php')) {
+    require __DIR__.'/../../autoload.php';
 } else {
-    require __DIR__ . '/../../../autoload.php';
+    require __DIR__.'/vendor/autoload.php';
 }
+
+define('MEGH_DIR', __DIR__);
 
 use Silly\Application;
 use Symfony\Component\Console\Output\OutputInterface;
 use Megh\Site;
+use Megh\WP;
 use Megh\Docker;
 use Megh\Configuration;
 
@@ -75,5 +78,9 @@ $app->command('delete name', function ($name) {
 
     info("Site $name deleted");
 })->descriptions('Delete the site.');
+
+$app->command('test', function () {
+    $dir = '/Users/tareq/megh-sites/site1.test';
+});
 
 $app->run();

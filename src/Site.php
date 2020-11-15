@@ -9,6 +9,8 @@ use Exception;
  */
 class Site
 {
+    use UsesCli;
+
     /**
      * The site name
      *
@@ -40,6 +42,13 @@ class Site
     private $root;
 
     /**
+     * Path to the website
+     *
+     * @var string
+     */
+    private $siteDir;
+
+    /**
      * Initialize the class
      *
      * @param string $sitename
@@ -63,12 +72,18 @@ class Site
         $this->type = $type;
         $this->php  = $php;
         $this->root = $root;
+        $this->siteDir = Configuration::sitePath() . '/' . $this->sitename;
 
         $this->configureSite();
         $this->enable();
+
+        if ('wp' === $this->type) {
+            $this->generateWpConfig();
+        }
+
         $this->addHost();
 
-        (new Configuration())->addSite($this->sitename, ['something', 'other']);
+        // (new Configuration())->addSite($this->sitename, ['something', 'other']);
     }
 
     /**
@@ -94,6 +109,10 @@ class Site
     {
         $this->copyFiles();
         $this->generateDockerCompose();
+
+        if ('wp' === $this->type) {
+            $this->installWp();
+        }
     }
 
     /**
@@ -106,30 +125,47 @@ class Site
         output('Copying files');
 
         $files   = new Filesystem();
-        $confDir = __DIR__ . '/../../configs';
-        $siteDir = Configuration::sitePath() . '/' . $this->sitename;
+        $confDir = MEGH_DIR . '/configs';
 
-        $files->ensureDirExists($siteDir, user());
-        $files->ensureDirExists($siteDir . '/app', user());
-        $files->ensureDirExists($siteDir . '/conf', user());
-        $files->ensureDirExists($siteDir . '/data', user());
-        $files->ensureDirExists($siteDir . '/data/logs', user());
-        $files->ensureDirExists($siteDir . '/data/mysql', user());
-        $files->ensureDirExists($siteDir . '/data/backups', user());
-        $files->ensureDirExists($siteDir . '/data/nginx-cache', user());
+        $files->ensureDirExists($this->siteDir, user());
+        $files->ensureDirExists($this->siteDir . '/app', user());
+        $files->ensureDirExists($this->siteDir . '/conf', user());
+        $files->ensureDirExists($this->siteDir . '/data', user());
+        $files->ensureDirExists($this->siteDir . '/data/logs', user());
+        $files->ensureDirExists($this->siteDir . '/data/mysql', user());
+        $files->ensureDirExists($this->siteDir . '/data/redis', user());
+        $files->ensureDirExists($this->siteDir . '/data/backups', user());
+        $files->ensureDirExists($this->siteDir . '/data/nginx-cache', user());
+
+        // env file
+        $password = bin2hex(openssl_random_pseudo_bytes(8));
+        $envFile = $files->get($confDir . '/.env.example');
+        $envFile = str_replace([
+            '{HOSTNAME}',
+            '{MYSQL_HOSTNAME}',
+            '{DATABASE}',
+            '{MYSQL_USERNAME}',
+            '{PASSWORD}'
+        ], [
+            $this->sitename,
+            'mariadb',
+            'wordpress',
+            'wp_user',
+            $password
+        ], $envFile);
+        $files->put($this->siteDir.'/.env', $envFile);
 
         // nginx conf
-        $files->copy($confDir . '/.env.example', $siteDir . '/.env');
-        $files->copyDir($confDir . '/default/config', $siteDir . '/conf');
+        $files->copyDir($confDir . '/default/config', $this->siteDir . '/conf');
 
         // replace nginx hostname
-        $nginxConf = $siteDir . '/conf/nginx/default.conf';
+        $nginxConf = $this->siteDir . '/conf/nginx/default.conf';
         $nginxCont = $files->get($nginxConf);
         $nginxCont = str_replace('NGINX_HOST', $this->sitename, $nginxCont);
         $files->put($nginxConf, $nginxCont);
 
         // default index.php
-        $files->put($siteDir . '/app/index.php', '<?php phpinfo();');
+        $files->put($this->siteDir . '/app/index.php', '<?php phpinfo();');
     }
 
     /**
@@ -142,7 +178,6 @@ class Site
         output('Generating docker-compose.yml');
 
         $files   = new Filesystem();
-        $siteDir = Configuration::sitePath() . '/' . $this->sitename;
 
         $config = [
             'version' => '3',
@@ -150,24 +185,17 @@ class Site
             'networks' => [
                 'site-network' => [
                     'external' => [
-                        'name' => $this->sitename
+                        'name' => '${VHOST_NAME}'
                     ]
                 ]
             ]
         ];
 
-        // $config['services']['redis'] = [
-        //     'image'          => 'redis:alpine',
-        //     'container_name' => 'redis',
-        //     'restart'        => 'always',
-        //     'ports'          => [ '6379:6379' ]
-        // ];
-
         $config['services']['nginx'] = [
             'image'       => 'nginx:alpine',
             'restart'     => 'always',
             'environment' => [
-                'VIRTUAL_HOST=' . $this->sitename
+                'VIRTUAL_HOST=${VHOST_NAME}'
             ],
             'volumes' => [
                 './app:/var/www/html',
@@ -177,36 +205,88 @@ class Site
                 './data/logs/nginx:/var/log/nginx',
                 './data/nginx-cache:/var/run/nginx-cache'
             ],
-            'depends_on' => [ 'php' ],
             'networks' => ['site-network']
         ];
 
-        $config['services']['php'] = [
-            'image'   => 'nanoninja/php-fpm:latest',
-            'volumes' => [
-                './app:/var/www/html'
-            ],
-            'networks' => ['site-network']
-        ];
+        if ($this->requiresPhp()) {
+            $config['services']['php'] = [
+                'image'   => 'tareq1988/php-wp:7.4',
+                'volumes' => [
+                    './app:/var/www/html'
+                ],
+                'depends_on' => ['mariadb'],
+                'networks' => ['site-network']
+            ];
 
-        // $config['services']['mariadb'] = [
-        //     'image'          => 'bitnami/mariadb:latest',
-        //     'restart'        => 'always',
-        //     'ports'          => [ '3306:3306' ],
-        //     'environment'    => [
-        //         'MARIADB_ROOT_USER=${MYSQL_ROOT_USER}',
-        //         'MARIADB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}',
-        //         'MARIADB_DATABASE=${MYSQL_DATABASE}',
-        //         'MARIADB_USER=${MYSQL_USER}',
-        //         'MARIADB_PASSWORD=${MYSQL_PASSWORD}'
-        //     ],
-        //     'volumes'        => [
-        //         './data/mysql:/bitnami'
-        //     ]
-        // ];
+            $config['services']['nginx']['depends_on'] = [ 'php' ];
+
+            // mariadb
+            $config['services']['mariadb'] = [
+                'image'          => 'mariadb:10.3',
+                'restart'        => 'always',
+                'ports'          => [ '3305:3306' ],
+                'environment'    => [
+                    'MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}',
+                    'MYSQL_DATABASE=${MYSQL_DATABASE}',
+                    'MYSQL_USER=${MYSQL_USER}',
+                    'MYSQL_PASSWORD=${MYSQL_PASSWORD}'
+                ],
+                'volumes'        => [
+                    './data/mysql:/var/lib/mysql'
+                ],
+                'networks' => ['site-network']
+            ];
+
+            $config['services']['redis'] = [
+                'image'          => 'redis:6-alpine',
+                'container_name' => 'redis',
+                'restart'        => 'always',
+                'ports'          => [ '6379:6379' ],
+                'volumes'        => [
+                    './data/redis:/data'
+                ],
+                'networks' => ['site-network']
+            ];
+        }
 
         $yaml = Yaml::dump($config, 4, 2);
-        $files->put($siteDir . '/docker-compose.yml', $yaml);
+        $files->put($this->siteDir . '/docker-compose.yml', $yaml);
+    }
+
+    /**
+     * If the site requires PHP support
+     *
+     * @return boolean
+     */
+    private function requiresPhp()
+    {
+        return in_array($this->type, ['php', 'wp'], true);
+    }
+
+    private function installWp()
+    {
+        output('Installing WordPress');
+
+        $wp = new WP();
+        $wp->setPath($this->siteDir . '/app');
+        $wp->download();
+    }
+
+    private function generateWpConfig()
+    {
+        output('Generating WordPress Configuration');
+
+        $config = \Dotenv\Dotenv::parse(file_get_contents($this->siteDir . '/.env'));
+
+        $wp = new WP();
+        $wp->setPath($this->siteDir);
+        $wp->generateConfig([
+            'dbname' => $config['MYSQL_DATABASE'],
+            'dbuser' => $config['MYSQL_USER'],
+            'dbpass' => $config['MYSQL_PASSWORD'],
+            'dbhost' => 'mariadb',
+            'dbport' => '3305',
+        ]);
     }
 
     /**
@@ -270,8 +350,7 @@ class Site
 
         if (! preg_match("/\s+$this->sitename\$/m", $content)) {
             // $filesystem->append( $path, $line );
-            $cli = new CommandLine();
-            $cli->run('echo "' . $line . '" | sudo tee -a ' . $path);
+            $this->cli()->run('echo "' . $line . '" | sudo tee -a ' . $path);
 
             info('Host entry successfully added.');
         } else {
@@ -289,8 +368,7 @@ class Site
         $content    = $filesystem->get($path);
 
         if (preg_match("/\s+$this->sitename\$/m", $content)) {
-            $cli = new CommandLine();
-            $cli->run('sudo sed -i "" "/^' . $line . '/d" ' . $path);
+            $this->cli()->run('sudo sed -i "" "/^' . $line . '/d" ' . $path);
         }
     }
 
@@ -300,7 +378,6 @@ class Site
 
         $siteDir = Configuration::sitePath() . '/' . $this->sitename;
 
-        $cli = new CommandLine();
-        $cli->run('rm -rf ' . $siteDir);
+        $this->cli()->run('rm -rf ' . $siteDir);
     }
 }

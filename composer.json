@@ -8,19 +8,25 @@
             "email": "tareq@wedevs.com"
         }
     ],
+    "config": {
+        "platform": {
+            "php": "7.2"
+        }
+    },
     "autoload": {
         "files": [
-            "cli/includes/helpers.php"
+            "src/helpers.php"
         ],
         "psr-4": {
-            "Megh\\": "cli/Megh/"
+            "Megh\\": "src/"
         }
     },
     "require": {
-        "php": ">=5.6",
-        "mnapoli/silly": "^1.7",
+        "php": ">=7.2",
+        "mnapoli/silly": "1.7",
         "symfony/process": "^4.0",
-        "symfony/yaml": "^4.2@dev"
+        "symfony/yaml": "4.4.x-dev",
+        "vlucas/phpdotenv": "^5.2@dev"
     },
     "minimum-stability": "dev"
 }

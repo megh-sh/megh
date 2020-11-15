@@ -10,6 +10,7 @@ class CommandLine
      * Simple global function to run commands.
      *
      * @param  string  $command
+     * 
      * @return void
      */
     public function quietly($command)
@@ -21,6 +22,7 @@ class CommandLine
      * Simple global function to run commands.
      *
      * @param  string  $command
+     * 
      * @return void
      */
     public function quietlyAsUser($command)
@@ -33,6 +35,7 @@ class CommandLine
      *
      * @param  string  $command
      * @param  callable $onError
+     * 
      * @return string
      */
     public function run($command, callable $onError = null)
@@ -45,6 +48,7 @@ class CommandLine
      *
      * @param  string  $command
      * @param  callable $onError
+     * 
      * @return string
      */
     public function runAsUser($command, callable $onError = null)
@@ -57,6 +61,7 @@ class CommandLine
      *
      * @param  string  $command
      * @param  callable $onError
+     * 
      * @return string
      */
     public function runCommand($command, callable $onError = null)

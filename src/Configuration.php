@@ -131,6 +131,6 @@ class Configuration
 
     public static function sitePath()
     {
-        return $_SERVER['HOME'] . '/sites';
+        return $_SERVER['HOME'] . '/megh-sites';
     }
 }

@@ -6,13 +6,9 @@ namespace Megh;
  */
 class Docker
 {
-    private $cli;
-    private $proxy = 'nginx-proxy';
+    use UsesCli;
 
-    public function __construct()
-    {
-        $this->cli = new CommandLine();
-    }
+    private $proxy = 'nginx-proxy';
 
     public function flightCheck()
     {
@@ -27,7 +23,7 @@ class Docker
      */
     private function checkDocker()
     {
-        $output = $this->cli->run('docker ps');
+        $output = $this->cli()->run('docker ps');
 
         if (! starts_with($output, 'CONTAINER')) {
             throw new \Exception('Docker is not running');
@@ -38,7 +34,7 @@ class Docker
 
     private function checkProxy()
     {
-        $output = $this->cli->run('docker images');
+        $output = $this->cli()->run('docker images');
 
         if (! str_contains($output, 'jwilder/nginx-proxy')) {
             warning('nginx proxy is not available. Pulling...');
@@ -50,12 +46,12 @@ class Docker
             }
         }
 
-        $output = $this->cli->run('docker ps');
+        $output = $this->cli()->run('docker ps');
 
         if (! str_contains($output, 'jwilder/nginx-proxy')) {
             warning('nginx-proxy isn\'t running, attempting to start...');
 
-            $output = $this->cli->run('docker start nginx-proxy');
+            $output = $this->cli()->run('docker start nginx-proxy');
 
             if (str_contains($output, 'Error')) {
                 warning($output);
@@ -69,14 +65,14 @@ class Docker
     public function initProxy()
     {
         $path = $this->proxyPath();
-        $command = 'docker run --name ' . $this->proxy . ' -e --restart=always -d -p 80:80 -p 443:443 -v ' . $path . '/certs:/etc/nginx/certs -v ' . $path . '/dhparam:/etc/nginx/dhparam -v ' . $path . '/conf.d:/etc/nginx/conf.d -v ' . $path . '/htpasswd:/etc/nginx/htpasswd -v ' . $path . '/vhost.d:/etc/nginx/vhost.d -v /var/run/docker.sock:/tmp/docker.sock:ro jwilder/nginx-proxy';
+        $command = 'docker run --name ' . $this->proxy . ' -e --restart=always -d -p 80:80 -p 443:443 -v ' . $path . '/certs:/etc/nginx/certs -v ' . $path . '/dhparam:/etc/nginx/dhparam -v ' . $path . '/conf.d:/etc/nginx/conf.d -v ' . $path . '/htpasswd:/etc/nginx/htpasswd -v ' . $path . '/vhost.d:/etc/nginx/vhost.d -v /var/run/docker.sock:/tmp/docker.sock:ro jwilder/nginx-proxy:alpine';
 
-        return $this->cli->run($command);
+        return $this->cli()->run($command);
     }
 
     public function createNetwork($sitename)
     {
-        return $this->cli->run('docker network create ' . $sitename, function ($code, $output) {
+        return $this->cli()->run('docker network create ' . $sitename, function ($code, $output) {
             warning($output);
             throw new \Exception('Error in starting the network');
         });
@@ -84,26 +80,26 @@ class Docker
 
     public function connectNetwork($sitename)
     {
-        return $this->cli->run('docker network connect ' . $sitename . ' ' . $this->proxy, function () {
+        return $this->cli()->run('docker network connect ' . $sitename . ' ' . $this->proxy, function () {
             throw new \Exception("There was some error connecting to {$this->proxy}.");
         });
     }
 
     public function removeNetwork($sitename)
     {
-        return $this->cli->run('docker network rm ' . $sitename);
+        return $this->cli()->run('docker network rm ' . $sitename);
     }
 
     public function disconnectNetwork($sitename)
     {
-        return $this->cli->run('docker network disconnect ' . $sitename . ' ' . $this->proxy);
+        return $this->cli()->run('docker network disconnect ' . $sitename . ' ' . $this->proxy);
     }
 
     public function composeUp($sitename)
     {
         $command = 'cd ' . Configuration::sitePath() . '/' . $sitename . ' && docker-compose up -d';
 
-        return $this->cli->run($command, function ($code, $output) {
+        return $this->cli()->run($command, function ($code, $output) {
             warning($output);
             throw new \Exception('Error in starting the site');
         });
@@ -113,9 +109,20 @@ class Docker
     {
         $command = 'cd ' . Configuration::sitePath() . '/' . $sitename . ' && docker-compose down';
 
-        return $this->cli->run($command, function ($code, $output) {
+        return $this->cli()->run($command, function ($code, $output) {
             warning($output);
             throw new \Exception('Error in removing the site');
+        });
+    }
+
+    public function runCommand($command, $sitePath, $container = 'php')
+    {
+        chdir($sitePath);
+
+        $cmd = "docker-compose run $container $command";
+
+        return $this->cli()->run($cmd, function ($code, $output) {
+            warning($output);
         });
     }
 
