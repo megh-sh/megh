@@ -56,6 +56,7 @@ class Site
     public function __construct($sitename)
     {
         $this->sitename = $sitename;
+        $this->siteDir = Configuration::sitePath() . '/' . $this->sitename;
     }
 
     /**
@@ -72,16 +73,17 @@ class Site
         $this->type = $type;
         $this->php  = $php;
         $this->root = $root;
-        $this->siteDir = Configuration::sitePath() . '/' . $this->sitename;
 
         $this->configureSite();
         $this->enable();
 
         if ('wp' === $this->type) {
+            $this->createDatabase();
             $this->generateWpConfig();
+            $this->installWp();
         }
 
-        $this->addHost();
+        // $this->addHost();
 
         // (new Configuration())->addSite($this->sitename, ['something', 'other']);
     }
@@ -93,8 +95,9 @@ class Site
      */
     public function delete()
     {
+        $this->dropDatabase();
         $this->disable();
-        $this->deleteHost();
+        // $this->deleteHost();
         $this->deleteFolder();
 
         (new Configuration())->removeSite($this->sitename);
@@ -111,7 +114,7 @@ class Site
         $this->generateDockerCompose();
 
         if ('wp' === $this->type) {
-            $this->installWp();
+            $this->downloadWp();
         }
     }
 
@@ -149,8 +152,8 @@ class Site
         ], [
             $this->sitename,
             'mariadb',
-            'wordpress',
-            'wp_user',
+            str_replace(['.', '-'], '_', $this->sitename),
+            str_replace(['.', '-'], '_', $this->sitename),
             $password
         ], $envFile);
         $files->put($this->siteDir.'/.env', $envFile);
@@ -165,7 +168,20 @@ class Site
         $files->put($nginxConf, $nginxCont);
 
         // default index.php
-        $files->put($this->siteDir . '/app/index.php', '<?php phpinfo();');
+        $files->put($this->siteDir . '/app/index.php', "<h1>{$this->sitename}</h1>");
+        $files->append($this->siteDir . '/app/index.php', <<<'EOD'
+
+<?php
+$conn = new mysqli('mariadb', 'root', 'root');
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+echo "Connected successfully";
+ 
+EOD);
     }
 
     /**
@@ -184,8 +200,16 @@ class Site
             'services' => [],
             'networks' => [
                 'site-network' => [
+                    'name' => '${VHOST_NAME}'
+                ],
+                'nginx-proxy' => [
                     'external' => [
-                        'name' => '${VHOST_NAME}'
+                        'name' => 'nginx-proxy'
+                    ]
+                ],
+                'db-network' => [
+                    'external' => [
+                        'name' => 'db-network'
                     ]
                 ]
             ]
@@ -205,7 +229,10 @@ class Site
                 './data/logs/nginx:/var/log/nginx',
                 './data/nginx-cache:/var/run/nginx-cache'
             ],
-            'networks' => ['site-network']
+            'networks' => [
+                'site-network',
+                'nginx-proxy'
+            ]
         ];
 
         if ($this->requiresPhp()) {
@@ -214,39 +241,48 @@ class Site
                 'volumes' => [
                     './app:/var/www/html'
                 ],
-                'depends_on' => ['mariadb'],
-                'networks' => ['site-network']
+                'networks' => [
+                    'site-network',
+                    'db-network'
+                ]
             ];
 
             $config['services']['nginx']['depends_on'] = [ 'php' ];
+            // $config['networks']['db-network']['external'] = true;
 
             // mariadb
-            $config['services']['mariadb'] = [
-                'image'          => 'mariadb:10.3',
-                'restart'        => 'always',
-                'ports'          => [ '3305:3306' ],
-                'environment'    => [
-                    'MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}',
-                    'MYSQL_DATABASE=${MYSQL_DATABASE}',
-                    'MYSQL_USER=${MYSQL_USER}',
-                    'MYSQL_PASSWORD=${MYSQL_PASSWORD}'
-                ],
-                'volumes'        => [
-                    './data/mysql:/var/lib/mysql'
-                ],
-                'networks' => ['site-network']
-            ];
+            // $config['services']['mariadb'] = [
+            //     'image'          => 'mariadb:10.3',
+            //     'restart'        => 'always',
+            //     // 'ports'          => [ '3306:3306' ],
+            //     'environment'    => [
+            //         'MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}',
+            //         'MYSQL_DATABASE=${MYSQL_DATABASE}',
+            //         'MYSQL_USER=${MYSQL_USER}',
+            //         'MYSQL_PASSWORD=${MYSQL_PASSWORD}'
+            //     ],
+            //     'volumes'        => [
+            //         './data/mysql:/var/lib/mysql'
+            //     ],
+            //     'networks' => ['site-network'],
+            //     'healthcheck' => [
+            //         'test' => 'mysqladmin ping -h 127.0.0.1 -u $$MYSQL_USER --password=$$MYSQL_PASSWORD',
+            //         'interval' => '60s',
+            //         'timeout' => '3s',
+            //         'start_period' => '10s',
+            //     ]
+            // ];
 
-            $config['services']['redis'] = [
-                'image'          => 'redis:6-alpine',
-                'container_name' => 'redis',
-                'restart'        => 'always',
-                'ports'          => [ '6379:6379' ],
-                'volumes'        => [
-                    './data/redis:/data'
-                ],
-                'networks' => ['site-network']
-            ];
+            // $config['services']['redis'] = [
+            //     'image'          => 'redis:6-alpine',
+            //     'container_name' => 'redis',
+            //     'restart'        => 'always',
+            //     // 'ports'          => [ '6379:6379' ],
+            //     'volumes'        => [
+            //         './data/redis:/data'
+            //     ],
+            //     'networks' => ['site-network']
+            // ];
         }
 
         $yaml = Yaml::dump($config, 4, 2);
@@ -263,20 +299,53 @@ class Site
         return in_array($this->type, ['php', 'wp'], true);
     }
 
-    private function installWp()
+    private function downloadWp()
     {
-        output('Installing WordPress');
+        output('Downloading WordPress');
 
         $wp = new WP();
         $wp->setPath($this->siteDir . '/app');
         $wp->download();
     }
 
-    private function generateWpConfig()
+    private function createDatabase()
+    {
+        output('Creating databse');
+
+        $docker = new Docker();
+        $config = $this->getEnv();
+
+        $create = sprintf('CREATE USER "%1$s"@"%%" IDENTIFIED BY "%2$s"; CREATE DATABASE `%3$s`; GRANT ALL PRIVILEGES ON `%3$s`.* TO "%1$s"@"%%"; FLUSH PRIVILEGES;', $config['MYSQL_USER'], $config['MYSQL_PASSWORD'], $config['MYSQL_DATABASE']);
+        $cmd = sprintf('mysql -h mariadb -u root -proot -e\'%s\'', $create);
+        $docker->runCommand($cmd, MEGH_HOME_PATH, 'mariadb');
+    }
+
+    private function dropDatabase()
+    {
+        output('Deleting databse');
+
+        $docker = new Docker();
+        $config = $this->getEnv();
+
+        $create = sprintf('DROP DATABASE `%s`; DROP USER "%s"@"%%";', $config['MYSQL_DATABASE'], $config['MYSQL_USER']);
+        $cmd = sprintf('mysql -h mariadb -u root -proot -e\'%s\'', $create);
+        $docker->runCommand($cmd, MEGH_HOME_PATH, 'mariadb');
+    }
+
+    private function installWp()
+    {
+        output('Installing WordPress');
+
+        $wp = new WP();
+        $wp->setPath($this->siteDir);
+        $wp->install($this->sitename, $this->sitename, 'admin', 'admin', 'admin@gmail.com');
+    }
+
+    public function generateWpConfig()
     {
         output('Generating WordPress Configuration');
 
-        $config = \Dotenv\Dotenv::parse(file_get_contents($this->siteDir . '/.env'));
+        $config = $this->getEnv();
 
         $wp = new WP();
         $wp->setPath($this->siteDir);
@@ -284,9 +353,20 @@ class Site
             'dbname' => $config['MYSQL_DATABASE'],
             'dbuser' => $config['MYSQL_USER'],
             'dbpass' => $config['MYSQL_PASSWORD'],
-            'dbhost' => 'mariadb',
-            'dbport' => '3305',
+            'dbhost' => 'mariadb'
         ]);
+    }
+    
+    /**
+     * Get ENV variables of a site
+     *
+     * @return array
+     */
+    public function getEnv()
+    {
+        $config = \Dotenv\Dotenv::parse(file_get_contents($this->siteDir . '/.env'));
+
+        return $config;
     }
 
     /**
@@ -299,11 +379,11 @@ class Site
         $docker = new Docker();
 
         try {
-            output('Creating network: ' . $this->sitename);
-            $docker->createNetwork($this->sitename);
+            // output('Creating network: ' . $this->sitename);
+            // $docker->createNetwork($this->sitename);
 
-            output('Connecting "' . $this->sitename . '" network to "nginx-proxy"');
-            $docker->connectNetwork($this->sitename);
+            // output('Connecting "' . $this->sitename . '" network to "nginx-proxy"');
+            // $docker->connectNetwork($this->sitename);
 
             output('Running docker-compose up -d');
             $docker->composeUp($this->sitename);
@@ -322,14 +402,14 @@ class Site
         $docker = new Docker();
 
         try {
+            // output('Disconnecting from "nginx-proxy" network');
+            // $docker->disconnectNetwork($this->sitename);
+
+            // output('Removing the network: ' . $this->sitename);
+            // $docker->removeNetwork($this->sitename);
+
             output('Taking down docker-compose');
             $docker->composeDown($this->sitename);
-
-            output('Disconnecting from "nginx-proxy" network');
-            $docker->disconnectNetwork($this->sitename);
-
-            output('Removing the network: ' . $this->sitename);
-            $docker->removeNetwork($this->sitename);
         } catch (\Exception $e) {
             warning($e->getMessage());
         }

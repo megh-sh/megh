@@ -1,6 +1,8 @@
 <?php
 namespace Megh;
 
+use Symfony\Component\Yaml\Yaml;
+
 /**
  * Configuration class
  */
@@ -18,9 +20,9 @@ class Configuration
         $this->createConfigurationDirectory();
         $this->createSitesDirectory();
         $this->createNginxConfigurationDirectory();
-        $this->writeBaseConfiguration();
+        $this->writeBaseDockerCompose();
 
-        $this->initDocker();
+        // $this->initDocker();
     }
 
     public function initDocker()
@@ -49,13 +51,64 @@ class Configuration
         $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/vhost.d', user());
     }
 
-    public function writeBaseConfiguration()
+    public function writeBaseDockerCompose()
     {
-        if (! $this->files->exists($this->path())) {
-            $this->write([
-                'sites' => []
-            ]);
-        }
+        $config = [
+            'version' => '3',
+            'services' => [
+                'nginx-proxy' => [
+                    'container_name' => 'nginx-proxy',
+                    'image' => 'jwilder/nginx-proxy:alpine',
+                    'restart' => 'always',
+                    'ports' => [
+                        '80:80',
+                        '443:443'
+                    ],
+                    'volumes' => [
+                        './nginx/certs:/etc/nginx/certs',
+                        './nginx/dhparam:/etc/nginx/dhparam',
+                        './nginx/conf.d:/etc/nginx/conf.d',
+                        './nginx/htpasswd:/etc/nginx/htpasswd',
+                        './nginx/vhost.d:/etc/nginx/vhost.d',
+                        '/var/run/docker.sock:/tmp/docker.sock:ro'
+                    ],
+                    'networks' => [
+                        'nginx-proxy'
+                    ]
+                ],
+                'mariadb' => [
+                    'container_name' => 'mariadb',
+                    'image'          => 'mariadb:10.3',
+                    'restart'        => 'always',
+                    'ports'          => [ '3306:3306' ],
+                    'environment'    => [
+                        'MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}',
+                        // 'MYSQL_DATABASE=${MYSQL_DATABASE}',
+                        // 'MYSQL_USER=${MYSQL_USER}',
+                        // 'MYSQL_PASSWORD=${MYSQL_PASSWORD}'
+                    ],
+                    'volumes'        => [
+                        './data/mysql:/var/lib/mysql'
+                    ],
+                    'networks' => [
+                        'db-network'
+                    ],
+                ]
+            ],
+            'networks' => [
+                'nginx-proxy' => [
+                    'external' => true
+                ],
+                'db-network' => [
+                    'external' => [
+                        'name' => 'db-network'
+                    ]
+                ],
+            ]
+        ];
+
+        $yaml = Yaml::dump($config, 4, 2);
+        $this->files->put(MEGH_HOME_PATH . '/docker-compose.yml', $yaml);
     }
 
     /**

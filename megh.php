@@ -10,6 +10,7 @@ if (file_exists(__DIR__.'/../../autoload.php')) {
     require __DIR__.'/vendor/autoload.php';
 }
 
+define('MEGH_HOME_PATH', $_SERVER['HOME'] . '/.megh');
 define('MEGH_DIR', __DIR__);
 
 use Silly\Application;
@@ -81,6 +82,17 @@ $app->command('delete name', function ($name) {
 
 $app->command('test', function () {
     $dir = '/Users/tareq/megh-sites/site1.test';
+    $name = 'site1.test';
+
+    $config = \Dotenv\Dotenv::parse(file_get_contents($dir . '/.env'));
+    $wp = new WP();
+    $wp->setPath($dir);
+    $wp->generateConfig([
+        'dbname' => $config['MYSQL_DATABASE'],
+        'dbuser' => $config['MYSQL_USER'],
+        'dbpass' => $config['MYSQL_PASSWORD'],
+        'dbhost' => 'mariadb'
+    ]);
 });
 
 $app->run();

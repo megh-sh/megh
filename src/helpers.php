@@ -4,8 +4,6 @@ use Symfony\Component\Process\Process;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Helper\Table;
 
-define('MEGH_HOME_PATH', $_SERVER['HOME'] . '/.megh' );
-
 /**
  * Output the given text to the console.
  *

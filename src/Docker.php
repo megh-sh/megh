@@ -119,7 +119,7 @@ class Docker
     {
         chdir($sitePath);
 
-        $cmd = "docker-compose run $container $command";
+        $cmd = "docker-compose run --rm $container $command";
 
         return $this->cli()->run($cmd, function ($code, $output) {
             warning($output);
