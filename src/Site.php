@@ -77,8 +77,11 @@ class Site
         $this->configureSite();
         $this->enable();
 
-        if ('wp' === $this->type) {
+        if ($this->requiresPhp()) {
             $this->createDatabase();
+        }
+
+        if ('wp' === $this->type) {
             $this->generateWpConfig();
             $this->installWp();
         }
@@ -140,21 +143,23 @@ class Site
 
         // env file
         $password = bin2hex(openssl_random_pseudo_bytes(8));
-        $envFile = $files->get($confDir . '/.env.example');
-        $envFile = str_replace([
+        $envContent = $files->get($confDir . '/.env.example');
+        $envContent = str_replace([
             '{HOSTNAME}',
-            '{MYSQL_HOSTNAME}',
-            '{DATABASE}',
-            '{MYSQL_USERNAME}',
-            '{PASSWORD}'
         ], [
             $this->sitename,
-            'mariadb',
-            str_replace(['.', '-'], '_', $this->sitename),
-            str_replace(['.', '-'], '_', $this->sitename),
-            $password
-        ], $envFile);
-        $files->put($this->siteDir.'/.env', $envFile);
+        ], $envContent);
+
+        if ($this->requiresPhp()) {
+            $dbname = str_replace(['.', '-'], '_', $this->sitename);
+
+            $envContent .= 'MYSQL_HOST=mariadb' . "\n";
+            $envContent .= 'MYSQL_DATABASE=' . $dbname . "\n";
+            $envContent .= 'MYSQL_USER=' . $dbname . "\n";
+            $envContent .= 'MYSQL_PASSWORD=' . $password . "\n";
+        }
+
+        $files->put($this->siteDir.'/.env', $envContent);
 
         // nginx conf
         $files->copyDir($confDir . '/default/config', $this->siteDir . '/conf');
@@ -305,9 +310,11 @@ EOD);
         $docker = new Docker();
         $config = $this->getEnv();
 
-        $create = sprintf('DROP DATABASE `%s`; DROP USER "%s"@"%%";', $config['MYSQL_DATABASE'], $config['MYSQL_USER']);
-        $cmd = sprintf('mysql -h mariadb -u root -proot -e\'%s\'', $create);
-        $docker->runCommand($cmd, MEGH_HOME_PATH, 'mariadb');
+        if (isset($config['MYSQL_DATABASE'])) {
+            $create = sprintf('DROP DATABASE `%s`; DROP USER "%s"@"%%";', $config['MYSQL_DATABASE'], $config['MYSQL_USER']);
+            $cmd = sprintf('mysql -h mariadb -u root -proot -e\'%s\'', $create);
+            $docker->runCommand($cmd, MEGH_HOME_PATH, 'mariadb');
+        }
     }
 
     private function installWp()

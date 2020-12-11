@@ -66,6 +66,8 @@ class CommandLine
      */
     public function runCommand($command, callable $onError = null)
     {
+        Helper::debug('[command] <comment>' . $command . '</comment>');
+
         $processOutput = '';
         $onError       = $onError ?: function () {
         };
