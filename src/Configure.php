@@ -1,6 +1,7 @@
 <?php
 namespace Megh;
 
+use const MEGH_HOME_PATH;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -8,8 +9,14 @@ use Symfony\Component\Yaml\Yaml;
  */
 class Configure
 {
+    /**
+     * @var Filesystem
+     */
     private $files;
 
+    /**
+     * Constructor
+     */
     public function __construct()
     {
         $this->files = new Filesystem();
@@ -35,7 +42,7 @@ class Configure
      */
     public function createConfigurationDirectory()
     {
-        Helper::verbose('Creating configuration directory');
+        Helper::verbose('Creating configuration directory on: ' . MEGH_HOME_PATH);
         
         $this->files->ensureDirExists(MEGH_HOME_PATH, Helper::user());
     }
@@ -47,7 +54,7 @@ class Configure
      */
     public function createSitesDirectory()
     {
-        Helper::verbose('Creating sites directory');
+        Helper::verbose('Creating sites directory on: ' . self::sitePath());
 
         $this->files->ensureDirExists(self::sitePath(), Helper::user());
     }
@@ -59,7 +66,7 @@ class Configure
      */
     public function createNginxConfigurationDirectory()
     {
-        Helper::verbose('Creating nginx configuration directory');
+        Helper::verbose('Creating nginx configuration directory on: ' . MEGH_HOME_PATH . '/nginx');
 
         $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/certs', Helper::user());
         $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/conf.d', Helper::user());
@@ -75,7 +82,7 @@ class Configure
      */
     public function writeBaseDockerCompose()
     {
-        Helper::verbose('Creating docker-compose.yml file');
+        Helper::verbose('Creating global service docker-compose.yml file on: ' . MEGH_HOME_PATH);
 
         $config = [
             'version' => '3',

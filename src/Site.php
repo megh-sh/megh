@@ -1,8 +1,9 @@
 <?php
 namespace Megh;
 
-use Symfony\Component\Yaml\Yaml;
 use Exception;
+use const MEGH_HOME_PATH;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * Site
@@ -245,41 +246,6 @@ EOD);
             ];
 
             $config['services']['nginx']['depends_on'] = [ 'php' ];
-            // $config['networks']['db-network']['external'] = true;
-
-            // mariadb
-            // $config['services']['mariadb'] = [
-            //     'image'          => 'mariadb:10.3',
-            //     'restart'        => 'always',
-            //     // 'ports'          => [ '3306:3306' ],
-            //     'environment'    => [
-            //         'MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}',
-            //         'MYSQL_DATABASE=${MYSQL_DATABASE}',
-            //         'MYSQL_USER=${MYSQL_USER}',
-            //         'MYSQL_PASSWORD=${MYSQL_PASSWORD}'
-            //     ],
-            //     'volumes'        => [
-            //         './data/mysql:/var/lib/mysql'
-            //     ],
-            //     'networks' => ['site-network'],
-            //     'healthcheck' => [
-            //         'test' => 'mysqladmin ping -h 127.0.0.1 -u $$MYSQL_USER --password=$$MYSQL_PASSWORD',
-            //         'interval' => '60s',
-            //         'timeout' => '3s',
-            //         'start_period' => '10s',
-            //     ]
-            // ];
-
-            // $config['services']['redis'] = [
-            //     'image'          => 'redis:6-alpine',
-            //     'container_name' => 'redis',
-            //     'restart'        => 'always',
-            //     // 'ports'          => [ '6379:6379' ],
-            //     'volumes'        => [
-            //         './data/redis:/data'
-            //     ],
-            //     'networks' => ['site-network']
-            // ];
         }
 
         $yaml = Yaml::dump($config, 4, 2);
@@ -296,6 +262,11 @@ EOD);
         return in_array($this->type, ['php', 'wp'], true);
     }
 
+    /**
+     * Download WordPress
+     *
+     * @return void
+     */
     private function downloadWp()
     {
         Helper::verbose('Downloading WordPress');
@@ -305,6 +276,11 @@ EOD);
         $wp->download();
     }
 
+    /**
+     * Create database
+     *
+     * @return void
+     */
     private function createDatabase()
     {
         Helper::verbose('Creating databse');
@@ -317,6 +293,11 @@ EOD);
         $docker->runCommand($cmd, MEGH_HOME_PATH, 'mariadb');
     }
 
+    /**
+     * Drop database
+     *
+     * @return void
+     */
     private function dropDatabase()
     {
         Helper::verbose('Deleting databse');
