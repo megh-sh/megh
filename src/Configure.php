@@ -6,7 +6,7 @@ use Symfony\Component\Yaml\Yaml;
 /**
  * Configuration class
  */
-class Configuration
+class Configure
 {
     private $files;
 
@@ -15,44 +15,68 @@ class Configuration
         $this->files = new Filesystem();
     }
 
+    /**
+     * Run the installer
+     *
+     * @return void
+     */
     public function install()
     {
         $this->createConfigurationDirectory();
         $this->createSitesDirectory();
         $this->createNginxConfigurationDirectory();
         $this->writeBaseDockerCompose();
-
-        // $this->initDocker();
     }
 
-    public function initDocker()
-    {
-        output('Initializing docker nginx-proxy');
-
-        (new Docker())->initProxy();
-    }
-
+    /**
+     * Create configuration directory
+     *
+     * @return void
+     */
     public function createConfigurationDirectory()
     {
-        $this->files->ensureDirExists(MEGH_HOME_PATH, user());
+        Helper::verbose('Creating configuration directory');
+        
+        $this->files->ensureDirExists(MEGH_HOME_PATH, Helper::user());
     }
 
+    /**
+     * Create sites directory
+     *
+     * @return void
+     */
     public function createSitesDirectory()
     {
-        $this->files->ensureDirExists(self::sitePath(), user());
+        Helper::verbose('Creating sites directory');
+
+        $this->files->ensureDirExists(self::sitePath(), Helper::user());
     }
 
+    /**
+     * Create nginx config directory
+     *
+     * @return void
+     */
     public function createNginxConfigurationDirectory()
     {
-        $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/certs', user());
-        $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/conf.d', user());
-        $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/dhparam', user());
-        $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/htpasswd', user());
-        $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/vhost.d', user());
+        Helper::verbose('Creating nginx configuration directory');
+
+        $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/certs', Helper::user());
+        $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/conf.d', Helper::user());
+        $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/dhparam', Helper::user());
+        $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/htpasswd', Helper::user());
+        $this->files->ensureDirExists(MEGH_HOME_PATH . '/nginx/vhost.d', Helper::user());
     }
 
+    /**
+     * Write docker compose file
+     *
+     * @return void
+     */
     public function writeBaseDockerCompose()
     {
+        Helper::verbose('Creating docker-compose.yml file');
+
         $config = [
             'version' => '3',
             'services' => [
@@ -97,7 +121,9 @@ class Configuration
             ],
             'networks' => [
                 'nginx-proxy' => [
-                    'external' => true
+                    'external' => [
+                        'name' => 'nginx-proxy'
+                    ]
                 ],
                 'db-network' => [
                     'external' => [
@@ -112,76 +138,10 @@ class Configuration
     }
 
     /**
-     * Add the given path to the configuration.
+     * Path to the sites directory
      *
-     * @param  string  $path
-     * @param  array  $info
-     * @return void
+     * @return string
      */
-    public function addSite($site, $info = [])
-    {
-        $this->write(tap($this->read(), function (&$config) use ($site, $info) {
-            $config['sites'][$site] = $info;
-        }));
-    }
-
-    /**
-     * Remove the given path from the configuration.
-     *
-     * @param  string  $path
-     * @return void
-     */
-    public function removeSite($site)
-    {
-        $this->write(tap($this->read(), function (&$config) use ($site) {
-            unset($config['sites'][$site]);
-        }));
-    }
-
-    /**
-     * Read the configuration file as JSON.
-     *
-     * @return array
-     */
-    public function read()
-    {
-        return json_decode($this->files->get($this->path()), true);
-    }
-
-    /**
-     * Update a specific key in the configuration file.
-     *
-     * @param  string  $key
-     * @param  mixed  $value
-     * @return array
-     */
-    public function updateKey($key, $value)
-    {
-        return tap($this->read(), function (&$config) use ($key, $value) {
-            $config[$key] = $value;
-            $this->write($config);
-        });
-    }
-
-    /**
-     * Write the given configuration to disk.
-     *
-     * @param  array  $config
-     * @return void
-     */
-    public function write($config)
-    {
-        $this->files->putAsUser($this->path(), json_encode(
-            $config,
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
-        ) . PHP_EOL);
-    }
-
-    private function path()
-    {
-        return MEGH_HOME_PATH . '/config.json';
-    }
-
     public static function sitePath()
     {
         return $_SERVER['HOME'] . '/megh-sites';

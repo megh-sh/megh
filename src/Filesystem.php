@@ -55,7 +55,7 @@ class Filesystem
      */
     public function mkdirAsUser($path, $mode = 0755)
     {
-        return $this->mkdir($path, user(), $mode);
+        return $this->mkdir($path, Helper::user(), $mode);
     }
 
     /**
@@ -84,7 +84,7 @@ class Filesystem
      */
     public function touchAsUser($path)
     {
-        return $this->touch($path, user());
+        return $this->touch($path, Helper::user());
     }
 
     /**
@@ -135,7 +135,7 @@ class Filesystem
      */
     public function putAsUser($path, $contents)
     {
-        return $this->put($path, $contents, user());
+        return $this->put($path, $contents, Helper::user());
     }
 
     /**
@@ -164,7 +164,7 @@ class Filesystem
      */
     public function appendAsUser($path, $contents)
     {
-        $this->append($path, $contents, user());
+        $this->append($path, $contents, Helper::user());
     }
 
     /**
@@ -190,7 +190,7 @@ class Filesystem
     {
         copy($from, $to);
 
-        $this->chown($to, user());
+        $this->chown($to, Helper::user());
     }
 
     /**
@@ -354,6 +354,7 @@ class Filesystem
      * Scan the given directory path.
      *
      * @param  string  $path
+     *
      * @return array
      */
     public function scandir($path)
@@ -362,5 +363,21 @@ class Filesystem
                     ->reject(function ($file) {
                         return in_array($file, ['.', '..']);
                     })->values()->all();
+    }
+
+    /**
+     * Get the directories from a path
+     *
+     * @param string $path
+     *
+     * @return array
+     */
+    public function listDir($path)
+    {
+        $dirs = $this->scandir($path);
+
+        return collect($dirs)->reject(function ($file) use ($path) {
+            return !$this->isDir($path . DIRECTORY_SEPARATOR .  $file);
+        })->values()->all();
     }
 }

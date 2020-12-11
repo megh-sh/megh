@@ -1,0 +1,23 @@
+#!/usr/bin/env php
+<?php
+require __DIR__.'/vendor/autoload.php';
+
+use Symfony\Component\Console\Application;
+
+define('MEGH_VERSION', '1.0');
+define('MEGH_HOME_PATH', $_SERVER['HOME'] . '/.megh');
+define('MEGH_DIR', __DIR__);
+
+$application = new Application('Megh CLI - Docker for PHP applications', MEGH_VERSION);
+
+$application->add(new \Megh\Commands\TestCommand());
+$application->add(new \Megh\Commands\InstallCommand());
+$application->add(new \Megh\Commands\CheckCommand());
+$application->add(new \Megh\Commands\StartCommand());
+$application->add(new \Megh\Commands\StopCommand());
+$application->add(new \Megh\Commands\CreateSiteCommand());
+$application->add(new \Megh\Commands\DeleteSiteCommand());
+$application->add(new \Megh\Commands\EnableSiteCommand());
+$application->add(new \Megh\Commands\DisableSiteCommand());
+
+$application->run();

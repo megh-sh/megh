@@ -1,5 +1,6 @@
 # Editor
 .vscode
+.php_cs.cache
 
 # macOS
 .DS_Store

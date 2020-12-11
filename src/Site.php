@@ -56,7 +56,7 @@ class Site
     public function __construct($sitename)
     {
         $this->sitename = $sitename;
-        $this->siteDir = Configuration::sitePath() . '/' . $this->sitename;
+        $this->siteDir = Configure::sitePath() . '/' . $this->sitename;
     }
 
     /**
@@ -68,11 +68,10 @@ class Site
      *
      * @return void
      */
-    public function create($type, $php, $root)
+    public function create($type, $php)
     {
         $this->type = $type;
         $this->php  = $php;
-        $this->root = $root;
 
         $this->configureSite();
         $this->enable();
@@ -99,8 +98,6 @@ class Site
         $this->disable();
         // $this->deleteHost();
         $this->deleteFolder();
-
-        (new Configuration())->removeSite($this->sitename);
     }
 
     /**
@@ -125,20 +122,20 @@ class Site
      */
     private function copyFiles()
     {
-        output('Copying files');
+        Helper::verbose('Copying files');
 
         $files   = new Filesystem();
         $confDir = MEGH_DIR . '/configs';
 
-        $files->ensureDirExists($this->siteDir, user());
-        $files->ensureDirExists($this->siteDir . '/app', user());
-        $files->ensureDirExists($this->siteDir . '/conf', user());
-        $files->ensureDirExists($this->siteDir . '/data', user());
-        $files->ensureDirExists($this->siteDir . '/data/logs', user());
-        $files->ensureDirExists($this->siteDir . '/data/mysql', user());
-        $files->ensureDirExists($this->siteDir . '/data/redis', user());
-        $files->ensureDirExists($this->siteDir . '/data/backups', user());
-        $files->ensureDirExists($this->siteDir . '/data/nginx-cache', user());
+        $files->ensureDirExists($this->siteDir, Helper::user());
+        $files->ensureDirExists($this->siteDir . '/app', Helper::user());
+        $files->ensureDirExists($this->siteDir . '/conf', Helper::user());
+        $files->ensureDirExists($this->siteDir . '/data', Helper::user());
+        $files->ensureDirExists($this->siteDir . '/data/logs', Helper::user());
+        $files->ensureDirExists($this->siteDir . '/data/mysql', Helper::user());
+        $files->ensureDirExists($this->siteDir . '/data/redis', Helper::user());
+        $files->ensureDirExists($this->siteDir . '/data/backups', Helper::user());
+        $files->ensureDirExists($this->siteDir . '/data/nginx-cache', Helper::user());
 
         // env file
         $password = bin2hex(openssl_random_pseudo_bytes(8));
@@ -191,7 +188,7 @@ EOD);
      */
     private function generateDockerCompose()
     {
-        output('Generating docker-compose.yml');
+        Helper::verbose('Generating docker-compose.yml');
 
         $files   = new Filesystem();
 
@@ -301,7 +298,7 @@ EOD);
 
     private function downloadWp()
     {
-        output('Downloading WordPress');
+        Helper::verbose('Downloading WordPress');
 
         $wp = new WP();
         $wp->setPath($this->siteDir . '/app');
@@ -310,7 +307,7 @@ EOD);
 
     private function createDatabase()
     {
-        output('Creating databse');
+        Helper::verbose('Creating databse');
 
         $docker = new Docker();
         $config = $this->getEnv();
@@ -322,7 +319,7 @@ EOD);
 
     private function dropDatabase()
     {
-        output('Deleting databse');
+        Helper::verbose('Deleting databse');
 
         $docker = new Docker();
         $config = $this->getEnv();
@@ -334,7 +331,7 @@ EOD);
 
     private function installWp()
     {
-        output('Installing WordPress');
+        Helper::verbose('Installing WordPress');
 
         $wp = new WP();
         $wp->setPath($this->siteDir);
@@ -343,7 +340,7 @@ EOD);
 
     public function generateWpConfig()
     {
-        output('Generating WordPress Configuration');
+        Helper::verbose('Generating WordPress Configuration');
 
         $config = $this->getEnv();
 
@@ -379,16 +376,16 @@ EOD);
         $docker = new Docker();
 
         try {
-            // output('Creating network: ' . $this->sitename);
+            // Helper::verbose('Creating network: ' . $this->sitename);
             // $docker->createNetwork($this->sitename);
 
-            // output('Connecting "' . $this->sitename . '" network to "nginx-proxy"');
+            // Helper::verbose('Connecting "' . $this->sitename . '" network to "nginx-proxy"');
             // $docker->connectNetwork($this->sitename);
 
-            output('Running docker-compose up -d');
-            $docker->composeUp($this->sitename);
+            Helper::verbose('Running docker-compose up -d');
+            $docker->composeUp($this->siteDir);
         } catch (Exception $e) {
-            warning($e->getMessage());
+            Helper::warning($e->getMessage());
         }
     }
 
@@ -402,16 +399,16 @@ EOD);
         $docker = new Docker();
 
         try {
-            // output('Disconnecting from "nginx-proxy" network');
+            // Helper::verbose('Disconnecting from "nginx-proxy" network');
             // $docker->disconnectNetwork($this->sitename);
 
-            // output('Removing the network: ' . $this->sitename);
+            // Helper::verbose('Removing the network: ' . $this->sitename);
             // $docker->removeNetwork($this->sitename);
 
-            output('Taking down docker-compose');
-            $docker->composeDown($this->sitename);
+            Helper::verbose('Taking down docker-compose');
+            $docker->composeDown($this->siteDir);
         } catch (\Exception $e) {
-            warning($e->getMessage());
+            Helper::warning($e->getMessage());
         }
     }
 
@@ -432,15 +429,15 @@ EOD);
             // $filesystem->append( $path, $line );
             $this->cli()->run('echo "' . $line . '" | sudo tee -a ' . $path);
 
-            info('Host entry successfully added.');
+            Helper::verbose('Host entry successfully added.');
         } else {
-            warning('Host entry already exists. Skipped.');
+            Helper::warning('Host entry already exists. Skipped.');
         }
     }
 
     private function deleteHost()
     {
-        output('Deleting Hosts file entry');
+        Helper::verbose('Deleting Hosts file entry');
         $path       = '/etc/hosts';
         $line       = "127.0.0.1\t$this->sitename";
 
@@ -454,9 +451,9 @@ EOD);
 
     private function deleteFolder()
     {
-        output('Deleting site folder');
+        Helper::verbose('Deleting site folder');
 
-        $siteDir = Configuration::sitePath() . '/' . $this->sitename;
+        $siteDir = Configure::sitePath() . '/' . $this->sitename;
 
         $this->cli()->run('rm -rf ' . $siteDir);
     }

@@ -10,7 +10,7 @@ class CommandLine
      * Simple global function to run commands.
      *
      * @param  string  $command
-     * 
+     *
      * @return void
      */
     public function quietly($command)
@@ -22,12 +22,12 @@ class CommandLine
      * Simple global function to run commands.
      *
      * @param  string  $command
-     * 
+     *
      * @return void
      */
     public function quietlyAsUser($command)
     {
-        $this->quietly('sudo -u ' . user() . ' ' . $command . ' > /dev/null 2>&1');
+        $this->quietly('sudo -u ' . Helper::user() . ' ' . $command . ' > /dev/null 2>&1');
     }
 
     /**
@@ -35,7 +35,7 @@ class CommandLine
      *
      * @param  string  $command
      * @param  callable $onError
-     * 
+     *
      * @return string
      */
     public function run($command, callable $onError = null)
@@ -48,12 +48,12 @@ class CommandLine
      *
      * @param  string  $command
      * @param  callable $onError
-     * 
+     *
      * @return string
      */
     public function runAsUser($command, callable $onError = null)
     {
-        return $this->runCommand('sudo -u ' . user() . ' ' . $command, $onError);
+        return $this->runCommand('sudo -u ' . Helper::user() . ' ' . $command, $onError);
     }
 
     /**
@@ -61,7 +61,7 @@ class CommandLine
      *
      * @param  string  $command
      * @param  callable $onError
-     * 
+     *
      * @return string
      */
     public function runCommand($command, callable $onError = null)
@@ -69,7 +69,7 @@ class CommandLine
         $processOutput = '';
         $onError       = $onError ?: function () {
         };
-        $process       = new Process($command);
+        $process       = Process::fromShellCommandline($command);
 
         $process->setTimeout(null)->run(function ($type, $line) use (&$processOutput) {
             $processOutput .= $line;

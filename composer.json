@@ -1,32 +1,39 @@
 {
-    "name": "tareq1988/pocker",
-    "description": "A docker PHP development server",
-    "type": "project",
+    "name": "megh/megh-cli",
+    "description": "Megh CLI",
+    "keywords": [
+        "docker",
+        "php",
+        "server",
+        "ubuntu",
+        "nginx",
+        "mysql",
+        "mariadb"
+    ],
+    "homepage": "https://megh.sh",
+    "license": "MIT",
     "authors": [
         {
             "name": "Tareq Hasan",
-            "email": "tareq@wedevs.com"
+            "email": "tareq@hey.com"
         }
     ],
-    "config": {
-        "platform": {
-            "php": "7.2"
-        }
+    "require": {
+        "illuminate/collections": "^9.0@dev",
+        "illuminate/container": "^9.0@dev",
+        "symfony/console": "^5.2",
+        "symfony/process": "5.x-dev",
+        "symfony/yaml": "5.x-dev",
+        "vlucas/phpdotenv": "^5.2@dev"
     },
     "autoload": {
-        "files": [
-            "src/helpers.php"
-        ],
         "psr-4": {
             "Megh\\": "src/"
         }
     },
-    "require": {
-        "php": ">=7.2",
-        "mnapoli/silly": "1.7",
-        "symfony/process": "^4.0",
-        "symfony/yaml": "4.4.x-dev",
-        "vlucas/phpdotenv": "^5.2@dev"
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true
     },
     "minimum-stability": "dev"
 }
