@@ -1,6 +1,7 @@
 <?php
 namespace Megh\Commands;
 
+use Megh\Docker;
 use Megh\Helper;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -35,6 +36,10 @@ class Command extends SymfonyCommand
     {
         Helper::app()->instance('input', $this->input = $input);
         Helper::app()->instance('output', $this->output = $output);
+
+        if (!(new Docker())->dockerRunning()) {
+            throw new \Exception('Docker is not running');
+        }
 
         $this->configureOutputStyles($output);
 

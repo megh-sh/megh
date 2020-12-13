@@ -11,17 +11,17 @@ class Docker
     /**
      * Check if Docker is running
      *
-     * @return void
+     * @return bool
      */
-    public function checkDocker()
+    public function dockerRunning()
     {
         $output = $this->cli()->run('docker ps');
 
-        if (! Helper::starts_with($output, 'CONTAINER')) {
-            throw new \Exception('Docker is not running');
+        if (Helper::starts_with($output, 'Error response')) {
+            return false;
         }
 
-        Helper::success('Docker is running');
+        return true;
     }
 
     /**

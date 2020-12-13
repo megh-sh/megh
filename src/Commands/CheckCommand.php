@@ -27,7 +27,6 @@ class CheckCommand extends Command
     public function handle()
     {
         $docker = new Docker();
-        $docker->checkDocker();
         
         if ($docker->containerRunning('nginx-proxy')) {
             Helper::success('[container] nginx-proxy is running');

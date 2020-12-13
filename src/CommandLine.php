@@ -74,6 +74,11 @@ class CommandLine
         $process       = Process::fromShellCommandline($command);
 
         $process->setTimeout(null)->run(function ($type, $line) use (&$processOutput) {
+            $trimmed = trim($line);
+            if ($trimmed) {
+                Helper::debug('OUTPUT: ' . $trimmed);
+            }
+
             $processOutput .= $line;
         });
 

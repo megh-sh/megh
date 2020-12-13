@@ -65,11 +65,11 @@ class Site
      *
      * @param string $type
      * @param string $php
-     * @param string $root
+     * @param bool $root
      *
      * @return void
      */
-    public function create($type, $php)
+    public function create($type, $php, $addHost)
     {
         $this->type = $type;
         $this->php  = $php;
@@ -86,7 +86,14 @@ class Site
             $this->installWp();
         }
 
-        // $this->addHost();
+        if ('laravel' === $this->type) {
+            $this->downloadLaravel();
+            $this->updateLaravelEnv();
+        }
+
+        if ($addHost) {
+            $this->addHost();
+        }
 
         // (new Configuration())->addSite($this->sitename, ['something', 'other']);
     }
@@ -168,6 +175,12 @@ class Site
         $nginxConf = $this->siteDir . '/conf/nginx/default.conf';
         $nginxCont = $files->get($nginxConf);
         $nginxCont = str_replace('NGINX_HOST', $this->sitename, $nginxCont);
+
+        // change the laravel web root
+        if ('laravel' === $this->type) {
+            $nginxCont = str_replace('root /var/www/html', 'root /var/www/html/public', $nginxCont);
+        }
+
         $files->put($nginxConf, $nginxCont);
 
         // default index.php
@@ -225,7 +238,7 @@ EOD);
                 'VIRTUAL_HOST=${VHOST_NAME}'
             ],
             'volumes' => [
-                './app:/var/www/html',
+                 './app:/var/www/html',
                 './conf/nginx/common:/etc/nginx/common',
                 './conf/nginx/default.conf:/etc/nginx/conf.d/default.conf',
                 './conf/nginx/nginx.conf:/etc/nginx/nginx.conf',
@@ -264,7 +277,7 @@ EOD);
      */
     private function requiresPhp()
     {
-        return in_array($this->type, ['php', 'wp'], true);
+        return in_array($this->type, ['php', 'wp', 'laravel'], true);
     }
 
     /**
@@ -282,13 +295,53 @@ EOD);
     }
 
     /**
+     * Download laravel
+     *
+     * @return void
+     */
+    private function downloadLaravel()
+    {
+        Helper::verbose('Downloading Laravel');
+
+        (new Docker())->runCommand('sh -c "rm index.php && composer create-project laravel/laravel --prefer-dist --no-dev ."', $this->siteDir);
+    }
+
+    private function updateLaravelEnv()
+    {
+        Helper::verbose('Updating .env file with credentials');
+
+        $files = new Filesystem();
+
+        $config = $this->getEnv();
+        $laravelEnv = $files->get($this->siteDir . '/app/.env');
+
+        $laravelEnv = str_replace(
+            [
+                'DB_HOST=127.0.0.1',
+                'DB_DATABASE=laravel',
+                'DB_USERNAME=root',
+                'DB_PASSWORD='
+            ],
+            [
+                'DB_HOST=mariadb',
+                'DB_DATABASE=' . $config['MYSQL_DATABASE'],
+                'DB_USERNAME=' . $config['MYSQL_USER'],
+                'DB_PASSWORD=' . $config['MYSQL_PASSWORD'],
+            ],
+            $laravelEnv
+        );
+
+        $files->put($this->siteDir . '/app/.env', $laravelEnv);
+    }
+
+    /**
      * Create database
      *
      * @return void
      */
     private function createDatabase()
     {
-        Helper::verbose('Creating databse');
+        Helper::verbose('Creating database');
 
         $docker = new Docker();
         $config = $this->getEnv();
