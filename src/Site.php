@@ -105,6 +105,10 @@ class Site
      */
     public function delete()
     {
+        if (!$this->siteExists()) {
+            throw new Exception('The given site does not exist.');
+        }
+
         $this->dropDatabase();
         $this->disable();
         // $this->deleteHost();
@@ -358,7 +362,7 @@ EOD);
      */
     private function dropDatabase()
     {
-        Helper::verbose('Deleting databse');
+        Helper::verbose('Deleting database');
 
         $docker = new Docker();
         $config = $this->getEnv();
@@ -414,6 +418,10 @@ EOD);
      */
     public function enable()
     {
+        if (!$this->siteExists()) {
+            throw new Exception('The given site does not exist.');
+        }
+
         $docker = new Docker();
 
         try {
@@ -437,6 +445,10 @@ EOD);
      */
     public function disable()
     {
+        if (!$this->siteExists()) {
+            throw new Exception('The given site does not exist.');
+        }
+
         $docker = new Docker();
 
         try {
@@ -476,6 +488,11 @@ EOD);
         }
     }
 
+    /**
+     * Delete from /etc/hosts
+     *
+     * @return void
+     */
     private function deleteHost()
     {
         Helper::verbose('Deleting Hosts file entry');
@@ -490,6 +507,11 @@ EOD);
         }
     }
 
+    /**
+     * Delete site folder
+     *
+     * @return void
+     */
     private function deleteFolder()
     {
         Helper::verbose('Deleting site folder');
@@ -497,5 +519,15 @@ EOD);
         $siteDir = Configure::sitePath() . '/' . $this->sitename;
 
         $this->cli()->run('rm -rf ' . $siteDir);
+    }
+
+    /**
+     * Check if a site exists
+     *
+     * @return bool
+     */
+    protected function siteExists()
+    {
+        return (new Filesystem())->exists($this->siteDir);
     }
 }

@@ -151,6 +151,8 @@ class Configure
      */
     public static function sitePath()
     {
-        return $_SERVER['HOME'] . '/megh-sites';
+        $home = $_SERVER['HOME'];
+
+        return Helper::isMac() ? $home . '/Sites' : $home;
     }
 }

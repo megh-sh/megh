@@ -48,6 +48,7 @@ class Command extends SymfonyCommand
 
     public function handle()
     {
+        return SymfonyCommand::SUCCESS;
     }
 
     /**
