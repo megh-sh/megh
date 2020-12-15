@@ -36,11 +36,32 @@ class Site
     private $php;
 
     /**
-     * The webroot of the site
+     * Undocumented variable
+     *
+     * @var array
+     */
+    private $supportedPhp = [ '7.2', '7.3', '7.4' ];
+
+    /**
+     * WordPress username
      *
      * @var string
      */
-    private $root;
+    private $username;
+    
+    /**
+     * Password
+     *
+     * @var string
+     */
+    private $password;
+
+    /**
+     * Email
+     *
+     * @var string
+     */
+    private $email;
 
     /**
      * Path to the website
@@ -69,10 +90,17 @@ class Site
      *
      * @return void
      */
-    public function create($type, $php, $addHost)
+    public function create($type, $php, $addHost, $username, $email, $password)
     {
-        $this->type = $type;
-        $this->php  = $php;
+        $this->type     = $type;
+        $this->php      = $php;
+        $this->username = $username;
+        $this->email    = $email;
+        $this->password = $password;
+
+        if (!in_array($php, $this->supportedPhp, true)) {
+            throw new Exception('The PHP version is not supported.');
+        }
 
         $this->configureSite();
         $this->enable();
@@ -82,6 +110,7 @@ class Site
         }
 
         if ('wp' === $this->type) {
+            $this->downloadWp();
             $this->generateWpConfig();
             $this->installWp();
         }
@@ -93,6 +122,19 @@ class Site
 
         if ($addHost) {
             $this->addHost();
+        }
+
+        if ('wp' === $this->type) {
+            Helper::line('');
+
+            $infoTable = [
+                [ 'URL',  'http://' . $this->sitename ],
+                [ 'Username', $this->username ],
+                [ 'Password', $this->password ],
+                [ 'Email', $this->email ]
+            ];
+
+            Helper::table([], $infoTable);
         }
 
         // (new Configuration())->addSite($this->sitename, ['something', 'other']);
@@ -124,10 +166,6 @@ class Site
     {
         $this->copyFiles();
         $this->generateDockerCompose();
-
-        if ('wp' === $this->type) {
-            $this->downloadWp();
-        }
     }
 
     /**
@@ -189,19 +227,6 @@ class Site
 
         // default index.php
         $files->put($this->siteDir . '/app/index.php', "<h1>{$this->sitename}</h1>");
-        $files->append($this->siteDir . '/app/index.php', <<<'EOD'
-
-<?php
-$conn = new mysqli('mariadb', 'root', 'root');
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-echo "Connected successfully";
- 
-EOD);
     }
 
     /**
@@ -257,7 +282,7 @@ EOD);
 
         if ($this->requiresPhp()) {
             $config['services']['php'] = [
-                'image'   => 'tareq1988/php-wp:7.4',
+                'image'   => 'meghsh/php:' . $this->php,
                 'volumes' => [
                     './app:/var/www/html'
                 ],
@@ -378,9 +403,17 @@ EOD);
     {
         Helper::verbose('Installing WordPress');
 
+        if (!$this->email) {
+            $this->email = $this->username . '@' . $this->sitename;
+        }
+
+        if (!$this->password) {
+            $this->password = bin2hex(openssl_random_pseudo_bytes(8));
+        }
+
         $wp = new WP();
         $wp->setPath($this->siteDir);
-        $wp->install($this->sitename, $this->sitename, 'admin', 'admin', 'admin@gmail.com');
+        $wp->install($this->sitename, $this->sitename, $this->username, $this->password, $this->email);
     }
 
     public function generateWpConfig()

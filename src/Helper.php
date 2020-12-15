@@ -2,7 +2,8 @@
 namespace Megh;
 
 use Illuminate\Container\Container;
-use TitasGailius\Terminal\Terminal;
+use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 class Helper
 {
@@ -112,6 +113,41 @@ class Helper
         if (static::app('output')->isVerbose()) {
             echo static::app('output')->writeln($text);
         }
+    }
+
+    /**
+     * Format input into a textual table.
+     *
+     * @param array  $headers
+     * @param array  $rows
+     * @param string $style
+     *
+     * @return void
+     */
+    public static function table(array $headers, array $rows, $style = 'default')
+    {
+        if (empty($rows)) {
+            return;
+        }
+
+        $table = new Table(static::app('output'));
+
+        $table->setHeaders($headers)->setRows($rows)->setStyle($style)->render();
+    }
+
+    /**
+     * Ask the user a confirmation question.
+     *
+     * @param string $question
+     * @param mixed  $default
+     *
+     * @return mixed
+     */
+    public static function confirm($question, $default = true)
+    {
+        $style = new SymfonyStyle(static::app('input'), static::app('output'));
+
+        return $style->confirm($question, $default);
     }
 
     /**

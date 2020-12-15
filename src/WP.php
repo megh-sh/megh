@@ -96,15 +96,14 @@ EOF;
      */
     public function install($url, $title, $username, $pass, $email)
     {
-        $command = sprintf('wp core install --url="http://%s" --title="%s" --admin_user="%s" --admin_password="%s" --admin_email="%s"', $url, $title, $username, $pass, $email);
         $docker = new Docker();
-        $docker->runCommand($command, $this->path);
+        
+        $command = "sh -c '";
+        $command .= sprintf('wp core install --url="http://%s" --title="%s" --admin_user="%s" --admin_password="%s" --admin_email="%s" && ', $url, $title, $username, $pass, $email);
+        $command .= 'wp rewrite structure "/%postname%/" --hard && ';
+        $command .= "wp plugin delete akismet hello'";
 
-        // $this->cli()->run($container, 'wp db create --allow-root --path=' . $path);
-        // $this->cli()->run($container, 'wp core install --url="http://' . $url .'" --title="' . $title .'" --admin_user="' . $username .'" --admin_password="' . $pass .'" --admin_email="' . $email .'" --allow-root --path=' . $path);
-        // $this->cli()->run($container, 'wp option update blogdescription "Just another bedIQ Site" --allow-root --path=' . $path);
-        // $this->cli()->run($container, 'wp rewrite structure "/%postname%/" --hard --allow-root --path=' . $path);
-        // $this->cli()->run($container, 'wp plugin delete akismet hello --allow-root --path=' . $path);
+        $docker->runCommand($command, $this->path);
     }
 
     /**

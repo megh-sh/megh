@@ -2,6 +2,7 @@
 namespace Megh\Commands;
 
 use Megh\Helper;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Input\InputArgument;
 
 class TestCommand extends Command
@@ -15,6 +16,7 @@ class TestCommand extends Command
     {
         $this
             ->setName('test')
+            ->setHidden(true)
             ->setDescription('A command for testing purpose only')
             ->addArgument('name', InputArgument::REQUIRED, 'Who do you want to greet?')
             ->addArgument('last_name', InputArgument::OPTIONAL, 'Your last name?');

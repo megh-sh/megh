@@ -21,6 +21,9 @@ class CreateSiteCommand extends Command
             ->addArgument('name', InputArgument::REQUIRED, 'The site domain name')
             ->addOption('type', null, InputOption::VALUE_OPTIONAL, 'Type of the site. Options: "php", "wp", "laravel".', 'php')
             ->addOption('php', null, InputOption::VALUE_OPTIONAL, 'The PHP version. Options: "7.2", "7.3", "7.4".', '7.4')
+            ->addOption('username', null, InputOption::VALUE_OPTIONAL, 'WordPress admin username', 'megh')
+            ->addOption('email', null, InputOption::VALUE_OPTIONAL, 'WordPress admin email')
+            ->addOption('pass', null, InputOption::VALUE_OPTIONAL, 'WordPress admin pasword')
             ->addOption('add-host', null, InputOption::VALUE_OPTIONAL, 'Wheather to add the domain to the hosts file.', false)
             ->addUsage('example.com --type=wp')
             ->addUsage('example.com --type=wp --php=7.3')
@@ -40,7 +43,10 @@ class CreateSiteCommand extends Command
         $site->create(
             $this->option('type'),
             $this->option('php'),
-            $this->option('add-host') !== false
+            $this->option('add-host') !== false,
+            $this->option('username'),
+            $this->option('email'),
+            $this->option('pass')
         );
 
         Helper::success("Site $name created");
