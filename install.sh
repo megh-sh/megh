@@ -37,7 +37,7 @@ function install_composer() {
 }
 
 function install_megh() {
-    composer global require megh-sh/megh
+    composer global require megh/megh-cli
 }
 
 # Run the commands

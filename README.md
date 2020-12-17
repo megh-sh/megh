@@ -27,6 +27,12 @@ Download and install Docker Desktop for Mac [from here](https://docs.docker.com/
 brew cask install docker
 ```
 
+Now install Megh CLI 
+
+```bash
+composer global require megh/megh-cli
+```
+
 ## Commands
 
 Available commands:
