@@ -31,6 +31,9 @@
             "Megh\\": "src/"
         }
     },
+    "bin": [
+        "megh"
+    ],
     "config": {
         "sort-packages": true,
         "optimize-autoloader": true
