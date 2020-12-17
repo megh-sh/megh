@@ -377,7 +377,8 @@ class Filesystem
         $dirs = $this->scandir($path);
 
         return collect($dirs)->reject(function ($file) use ($path) {
-            return !$this->isDir($path . DIRECTORY_SEPARATOR .  $file);
+            $fullPath = $path . DIRECTORY_SEPARATOR . $file;
+            return !$this->isDir($fullPath) || Helper::starts_with($fullPath, '.');
         })->values()->all();
     }
 }

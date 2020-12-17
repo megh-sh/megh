@@ -191,7 +191,7 @@ class Site
         $files->ensureDirExists($this->siteDir . '/data/nginx-cache', Helper::user());
 
         // env file
-        $password = bin2hex(openssl_random_pseudo_bytes(8));
+        $password = Helper::password();
         $envContent = $files->get($confDir . '/.env.example');
         $envContent = str_replace([
             '{HOSTNAME}',
@@ -408,7 +408,7 @@ class Site
         }
 
         if (!$this->password) {
-            $this->password = bin2hex(openssl_random_pseudo_bytes(8));
+            $this->password = Helper::password();
         }
 
         $wp = new WP();

@@ -43,12 +43,12 @@ class Command extends SymfonyCommand
 
         $this->configureOutputStyles($output);
 
-        return $this->handle() ?: SymfonyCommand::SUCCESS;
+        return $this->handle() ?: 0;
     }
 
     public function handle()
     {
-        return SymfonyCommand::SUCCESS;
+        return 0;
     }
 
     /**

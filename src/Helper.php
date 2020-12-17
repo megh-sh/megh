@@ -151,6 +151,18 @@ class Helper
     }
 
     /**
+     * Generate a password
+     *
+     * @param integer $length
+     * 
+     * @return string
+     */
+    public static function password($length = 8) 
+    {
+        return bin2hex(openssl_random_pseudo_bytes($length))
+    }
+
+    /**
      * Check if we are on macOS
      *
      * @return boolean

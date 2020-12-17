@@ -33,6 +33,7 @@ class Configure
         $this->createSitesDirectory();
         $this->createNginxConfigurationDirectory();
         $this->writeBaseDockerCompose();
+        $this->createEnvFile();
     }
 
     /**
@@ -142,6 +143,23 @@ class Configure
 
         $yaml = Yaml::dump($config, 4, 2);
         $this->files->put(MEGH_HOME_PATH . '/docker-compose.yml', $yaml);
+    }
+
+    /**
+     * Create an env file
+     *
+     * @return void
+     */
+    protected function createEnvFile()
+    {
+        $path = MEGH_HOME_PATH . '/.env';
+
+        if (!$this->files->exists($path)) {
+            $password = Helper::password();
+            $content = 'MYSQL_ROOT_PASSWORD=' . $password . "\n";
+
+            $this->files->put($path, $content);
+        }
     }
 
     /**
