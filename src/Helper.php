@@ -159,7 +159,7 @@ class Helper
      */
     public static function password($length = 8) 
     {
-        return bin2hex(openssl_random_pseudo_bytes($length))
+        return bin2hex(openssl_random_pseudo_bytes($length));
     }
 
     /**

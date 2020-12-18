@@ -24,6 +24,13 @@ function install_docker() {
     fi
 }
 
+function pull_images() {
+    docker pull jwilder/nginx-proxy:alpine
+    docker pull mariadb:10.3
+    docker pull nginx:alpine
+    docker pull meghsh/php:7.4
+}
+
 function install_php() {
     if ! command -v php >/dev/null 2>&1; then
         add-apt-repository -y ppa:ondrej/php
@@ -72,7 +79,7 @@ function create_user() {
     systemctl restart docker
 
     # Login as megh
-    su -s megh
+    su megh
 }
 
 function install_megh() {
@@ -87,6 +94,7 @@ function install_megh() {
 # Run the commands
 bootstrap
 install_docker
+pull_images
 install_php
 install_composer
 create_user

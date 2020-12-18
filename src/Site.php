@@ -376,7 +376,7 @@ class Site
         $config = $this->getEnv();
 
         $create = sprintf('CREATE USER "%1$s"@"%%" IDENTIFIED BY "%2$s"; CREATE DATABASE `%3$s`; GRANT ALL PRIVILEGES ON `%3$s`.* TO "%1$s"@"%%"; FLUSH PRIVILEGES;', $config['MYSQL_USER'], $config['MYSQL_PASSWORD'], $config['MYSQL_DATABASE']);
-        $cmd = sprintf('mysql -h mariadb -u root -proot -e\'%s\'', $create);
+        $cmd = sprintf('mysql -h mariadb -u root -p%s -e\'%s\'', $this->getMySqlRootPass(), $create);
         $docker->runCommand($cmd, MEGH_HOME_PATH, 'mariadb');
     }
 
@@ -394,7 +394,7 @@ class Site
 
         if (isset($config['MYSQL_DATABASE'])) {
             $create = sprintf('DROP DATABASE `%s`; DROP USER "%s"@"%%";', $config['MYSQL_DATABASE'], $config['MYSQL_USER']);
-            $cmd = sprintf('mysql -h mariadb -u root -proot -e\'%s\'', $create);
+            $cmd = sprintf('mysql -h mariadb -u root -p%s -e\'%s\'', $this->getMySqlRootPass(), $create);
             $docker->runCommand($cmd, MEGH_HOME_PATH, 'mariadb');
         }
     }
@@ -442,6 +442,18 @@ class Site
         $config = \Dotenv\Dotenv::parse(file_get_contents($this->siteDir . '/.env'));
 
         return $config;
+    }
+
+    /**
+     * MySQL Root Password
+     *
+     * @return string
+     */
+    public function getMySqlRootPass()
+    {
+        $config = \Dotenv\Dotenv::parse(file_get_contents(MEGH_HOME_PATH . '/.env'));
+
+        return isset($config['MYSQL_ROOT_PASSWORD']) ? $config['MYSQL_ROOT_PASSWORD'] : '';
     }
 
     /**

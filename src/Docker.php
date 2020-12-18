@@ -17,7 +17,7 @@ class Docker
     {
         $output = $this->cli()->run('docker ps');
 
-        if (Helper::starts_with($output, 'Error response')) {
+        if (Helper::starts_with($output, 'Error response') || Helper::starts_with($output, 'Cannot connect to the Docker daemon')) {
             return false;
         }
 
