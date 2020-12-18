@@ -53,12 +53,16 @@ class StopCommand extends Command
         $docker = new Docker();
         $files = new Filesystem();
 
-        $files = $files->listDir($sitePath);
+        $dirs = $files->listDir($sitePath);
         
-        if ($files) {
-            foreach ($files as $site) {
-                Helper::debug('Stopping site: ' . $site);
-                $docker->composeDown($sitePath . DIRECTORY_SEPARATOR . $site);
+        if ($dirs) {
+            foreach ($dirs as $site) {
+                $path = $sitePath . DIRECTORY_SEPARATOR . $site;
+
+                if ($files->exists($path . '/docker-compose.yaml')) {
+                    Helper::debug('Stopping site: ' . $site);
+                    $docker->composeDown($sitePath . DIRECTORY_SEPARATOR . $site);
+                }
             }
         }
     }

@@ -180,15 +180,13 @@ class Site
         $files   = new Filesystem();
         $confDir = MEGH_DIR . '/configs';
 
-        $files->ensureDirExists($this->siteDir, Helper::user());
-        $files->ensureDirExists($this->siteDir . '/app', Helper::user());
-        $files->ensureDirExists($this->siteDir . '/conf', Helper::user());
-        $files->ensureDirExists($this->siteDir . '/data', Helper::user());
-        $files->ensureDirExists($this->siteDir . '/data/logs', Helper::user());
-        $files->ensureDirExists($this->siteDir . '/data/mysql', Helper::user());
-        $files->ensureDirExists($this->siteDir . '/data/redis', Helper::user());
-        $files->ensureDirExists($this->siteDir . '/data/backups', Helper::user());
-        $files->ensureDirExists($this->siteDir . '/data/nginx-cache', Helper::user());
+        $files->ensureDirExists($this->siteDir);
+        $files->ensureDirExists($this->siteDir . '/app');
+        $files->ensureDirExists($this->siteDir . '/conf');
+        $files->ensureDirExists($this->siteDir . '/data');
+        $files->ensureDirExists($this->siteDir . '/data/logs');
+        $files->ensureDirExists($this->siteDir . '/data/backups');
+        $files->ensureDirExists($this->siteDir . '/data/nginx-cache');
 
         // env file
         $password = Helper::password();

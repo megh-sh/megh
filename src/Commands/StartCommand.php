@@ -53,12 +53,16 @@ class StartCommand extends Command
         $docker = new Docker();
         $files = new Filesystem();
 
-        $files = $files->listDir($sitePath);
+        $dirs = $files->listDir($sitePath);
         
-        if ($files) {
-            foreach ($files as $site) {
-                Helper::debug('Starting site: ' . $site);
-                $docker->composeUp($sitePath . DIRECTORY_SEPARATOR . $site);
+        if ($dirs) {
+            foreach ($dirs as $site) {
+                $path = $sitePath . DIRECTORY_SEPARATOR . $site;
+
+                if ($files->exists($path . '/docker-compose.yaml')) {
+                    Helper::debug('Starting site: ' . $site);
+                    $docker->composeUp($sitePath . DIRECTORY_SEPARATOR . $site);
+                }
             }
         }
     }

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+USERNAME=megh
+
 if [[ $EUID -ne 0 ]]; then
     echo "This script must be run as root."
 
@@ -9,6 +11,20 @@ fi
 function bootstrap() {
     apt-get update
     apt-get install -y --force-yes software-properties-common
+}
+
+function create_swap() {
+    if [ -f /swapfile ]; then
+        echo "Swap exists."
+    else
+        fallocate -l 1G /swapfile
+        chmod 600 /swapfile
+        mkswap /swapfile
+        swapon /swapfile
+        echo "/swapfile none swap sw 0 0" >>/etc/fstab
+        echo "vm.swappiness=30" >>/etc/sysctl.conf
+        echo "vm.vfs_cache_pressure=50" >>/etc/sysctl.conf
+    fi
 }
 
 function install_docker() {
@@ -55,30 +71,44 @@ function setup_firewall() {
 
 function create_user() {
     # Add sudo user and grant privileges
-    useradd --create-home --shell "/bin/bash" --groups sudo megh
+    useradd --create-home --shell "/bin/bash" --groups sudo "${USERNAME}"
+
+    # Check whether the root account has a real password set
+    encrypted_root_pw="$(grep root /etc/shadow | cut --delimiter=: --fields=2)"
+
+    if [ "${encrypted_root_pw}" != "*" ]; then
+        # Transfer auto-generated root password to user if present
+        # and lock the root account to password-based access
+        echo "${USERNAME}:${encrypted_root_pw}" | chpasswd --encrypted
+        passwd --lock root
+    else
+        # Delete invalid password for user if using keys so that a new password
+        # can be set without providing a previous value
+        passwd --delete "${USERNAME}"
+    fi
 
     # Setup bash profiles
-    cp /root/.profile /home/megh/.profile
-    cp /root/.bashrc /home/megh/.bashrc
+    cp /root/.profile /home/"${USERNAME}"/.profile
+    cp /root/.bashrc /home/"${USERNAME}"/.bashrc
 
     # Create SSH key
-    mkdir -p /home/megh/.ssh
-    cp /root/.ssh/authorized_keys /home/megh/.ssh/authorized_keys
+    mkdir -p /home/"${USERNAME}"/.ssh
+    cp /root/.ssh/authorized_keys /home/"${USERNAME}"/.ssh/authorized_keys
 
-    ssh-keygen -f /home/megh/.ssh/id_rsa -t rsa -N ''
+    ssh-keygen -f /home/"${USERNAME}"/.ssh/id_rsa -t rsa -N ''
 
     # Fix Directory Permissions
-    chown -R megh:megh /home/megh
-    chmod -R 755 /home/megh
-    chmod 700 /home/megh/.ssh/id_rsa
+    chown -R "${USERNAME}":"${USERNAME}" /home/"${USERNAME}"
+    chmod -R 755 /home/"${USERNAME}"
+    chmod 700 /home/"${USERNAME}"/.ssh/id_rsa
 
     # Add docker permissions
-    usermod -aG docker megh
+    usermod -aG docker "${USERNAME}"
     chmod 666 /var/run/docker.sock
     systemctl restart docker
 
-    # Login as megh
-    su megh
+    # Login as user
+    su "${USERNAME}"
 }
 
 function install_megh() {
@@ -88,10 +118,12 @@ function install_megh() {
     source ~/.bashrc
 
     megh install
+    megh start
 }
 
 # Run the commands
 bootstrap
+create_swap
 install_docker
 pull_images
 install_php
