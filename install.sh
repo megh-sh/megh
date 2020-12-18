@@ -106,9 +106,6 @@ function create_user() {
     usermod -aG docker "${USERNAME}"
     chmod 666 /var/run/docker.sock
     systemctl restart docker
-
-    # Login as user
-    su "${USERNAME}"
 }
 
 function install_megh() {
@@ -122,9 +119,13 @@ function install_megh() {
 }
 
 function install_megh_git() {
-    sudo git clone https://github.com/megh-sh/megh.git /opt/megh
+    git clone https://github.com/megh-sh/megh.git /opt/megh
+    composer install
 
     sudo ln -s /opt/megh/megh /usr/local/bin/megh
+
+    # Login as user
+    su "${USERNAME}"
 
     megh install
     megh start

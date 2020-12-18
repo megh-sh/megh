@@ -123,11 +123,12 @@ class Docker
      *
      * @return mixed
      */
-    public function runCommand($command, $sitePath, $container = 'php')
+    public function runCommand($command, $sitePath, $container = 'php', $user = 'www-data')
     {
         chdir($sitePath);
+        echo $sitePath . "\n";
 
-        $cmd = "docker-compose run --rm $container $command";
+        $cmd = "docker-compose run --rm --user $user $container $command";
 
         return $this->cli()->run($cmd, function ($code, $output) {
             Helper::warning($output);

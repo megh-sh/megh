@@ -54,7 +54,17 @@ class WP
     {
         $docker = new Docker();
 
-        return $docker->runCommand("wp core config --dbname={$config['dbname']} --dbuser={$config['dbuser']} --dbpass={$config['dbpass']} --dbhost={$config['dbhost']} --extra-php <<'PHP'\n" . $this->extraPhp() . "\nPHP", $this->path);
+        return $docker->runCommand(
+            sprintf(
+                "wp core config --dbname=%s --dbuser=%s --dbpass=%s --dbhost=%s --extra-php <<'PHP'\n%s\nPHP",
+                $config['dbname'],
+                $config['dbuser'],
+                $config['dbpass'],
+                $config['dbhost'],
+                $this->extraPhp()
+            ), 
+            $this->path
+        );
     }
 
     public function extraPhp()
@@ -104,103 +114,4 @@ EOF;
         $docker->runCommand($command, $this->path);
     }
 
-    /**
-     * Install plugins on a site
-     *
-     * @param  string $container
-     * @param  string $path
-     * @param  array  $plugins
-     *
-     * @return string
-     */
-    public function installPlugins($container, $path, array $plugins)
-    {
-        if (!$plugins) {
-            return;
-        }
-        return $this->cli()->run($container, 'wp plugin install --activate ' . implode(' ', $plugins) . ' --allow-root --path=' . $path);
-    }
-
-    public function activatePlugins($container, $path)
-    {
-        return $this->cli()->run($container, 'wp plugin activate --all --allow-root --path='. $path);
-    }
-
-    /**
-     * @param $container
-     * @param $path
-     * @return string
-     */
-    public function installMUPlugins($container, $path)
-    {
-        $this->cli()->run($container, 'sudo apt-get install unzip'); // in case unzip was not installed
-        $this->cli()->run($container, 'wget https://storage.googleapis.com/bediq-backups/bediq-core/mu-plugins.zip');
-        $this->cli()->run($container, 'unzip mu-plugins.zip');
-        return $this->cli()->run($container, 'mv mu-plugins ' . $path .'/wp-content/');
-    }
-
-    /**
-     * @param $container
-     * @param $path
-     * @return string
-     */
-    public function defaultDataImport($container, $path)
-    {
-        $this->cli()->run($container, 'wget https://storage.googleapis.com/bediq-backups/bediq-core/bediq.sql');
-        return $this->cli()->run($container, 'wp db import --allow-root bediq.sql --path=' . $path);
-    }
-
-    public function optionSet($container, $path, $key, $value)
-    {
-        return $this->cli()->run($container, 'wp option set '.$key.' '.$value.' --allow-root --path=' . $path);
-    }
-
-
-
-    /**
-     * Install themes on a site
-     *
-     * @param  string $container
-     * @param  string $path
-     * @param  array  $themes
-     *
-     * @return string
-     */
-    public function installThemes($container, $path, array $themes)
-    {
-        if (!$themes) {
-            return;
-        }
-
-        return $this->cli()->run($container, 'wp theme install ' . implode(' ', $themes) . ' --allow-root --path=' . $path);
-    }
-
-    public function activateTheme($container, $path, $theme)
-    {
-        return $this->cli()->run($container, 'wp theme activate --allow-root '.$theme .' --path='. $path);
-    }
-
-
-    /**
-     * Change the WP installation ownership back to www-data
-     *
-     * @param  string $container
-     *
-     * @return string
-     */
-    public function changeOwner($container)
-    {
-        return $this->cli()->run($container, 'sh -c "chown -R www-data:www-data /var/www/html"');
-    }
-
-    public function backup($container, $path)
-    {
-        $fileName = $container . '-' . date('Y-m-d') . '.sql.gz';
-        $this->cli()->run($container, 'sh -c "wp db export - --allow-root --path=' . $path . ' | gzip > ' . $fileName . '"');
-
-        $this->pullFile($container, 'root/' . $fileName, '/root/backups/');
-        $this->deleteFile($container, 'root/' . $fileName);
-
-        return '/root/backups/' . $fileName;
-    }
 }

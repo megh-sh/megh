@@ -166,6 +166,7 @@ class Site
     {
         $this->copyFiles();
         $this->generateDockerCompose();
+        $this->fixPermission();
     }
 
     /**
@@ -298,6 +299,19 @@ class Site
     }
 
     /**
+     * Fix directory permission
+     *
+     * @return void
+     */
+    public function fixPermission()
+    {
+        $docker = new Docker();
+
+        $command = 'sh -c "chown -R www-data:www-data /var/www/html"';
+        $docker->runCommand($command, $this->siteDir, 'php', 'root');
+    }
+
+    /**
      * If the site requires PHP support
      *
      * @return boolean
@@ -317,7 +331,7 @@ class Site
         Helper::verbose('Downloading WordPress');
 
         $wp = new WP();
-        $wp->setPath($this->siteDir . '/app');
+        $wp->setPath($this->siteDir);
         $wp->download();
     }
 
