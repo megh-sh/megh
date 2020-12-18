@@ -121,6 +121,15 @@ function install_megh() {
     megh start
 }
 
+function install_megh_git() {
+    sudo git clone https://github.com/megh-sh/megh.git /opt/megh
+
+    sudo ln -s /opt/megh/megh /usr/local/bin/megh
+
+    megh install
+    megh start
+}
+
 # Run the commands
 bootstrap
 create_swap
@@ -129,4 +138,4 @@ pull_images
 install_php
 install_composer
 create_user
-install_megh
+install_megh_git
