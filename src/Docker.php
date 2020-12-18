@@ -126,7 +126,6 @@ class Docker
     public function runCommand($command, $sitePath, $container = 'php', $user = 'www-data')
     {
         chdir($sitePath);
-        echo $sitePath . "\n";
 
         $cmd = "docker-compose run --rm --user $user $container $command";
 

@@ -17,7 +17,7 @@ $application = new Application('Megh CLI - Docker for PHP applications', MEGH_VE
 
 $application->add(new \Megh\Commands\TestCommand());
 $application->add(new \Megh\Commands\InstallCommand());
-$application->add(new \Megh\Commands\CheckCommand());
+$application->add(new \Megh\Commands\StatusCommand());
 $application->add(new \Megh\Commands\StartCommand());
 $application->add(new \Megh\Commands\StopCommand());
 $application->add(new \Megh\Commands\CreateSiteCommand());

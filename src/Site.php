@@ -186,6 +186,7 @@ class Site
         $files->ensureDirExists($this->siteDir . '/conf');
         $files->ensureDirExists($this->siteDir . '/data');
         $files->ensureDirExists($this->siteDir . '/data/logs');
+        $files->ensureDirExists($this->siteDir . '/data/logs/nginx');
         $files->ensureDirExists($this->siteDir . '/data/backups');
         $files->ensureDirExists($this->siteDir . '/data/nginx-cache');
 
@@ -240,7 +241,7 @@ class Site
         $files   = new Filesystem();
 
         $config = [
-            'version' => '3',
+            'version' => '3.5',
             'services' => [],
             'networks' => [
                 'site-network' => [

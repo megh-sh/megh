@@ -5,7 +5,7 @@ use Megh\Docker;
 use Megh\Helper;
 use Megh\Services;
 
-class CheckCommand extends Command
+class StatusCommand extends Command
 {
     /**
      * Configure the command options.
@@ -15,7 +15,7 @@ class CheckCommand extends Command
     protected function configure()
     {
         $this
-            ->setName('check')
+            ->setName('status')
             ->setDescription('Check docker and proxy status');
     }
 
