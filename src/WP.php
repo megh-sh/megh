@@ -38,7 +38,7 @@ class WP
      */
     public function download()
     {
-        return $this->cli()->run('wp core download --allow-root --path=' . $this->path);
+        return (new Docker())->runCommand('wp core download', $this->path);
     }
 
     /**
@@ -54,9 +54,7 @@ class WP
     {
         $docker = new Docker();
 
-        // echo $this->path;
-        // return;
-        return $docker->runCommand("wp core config --dbname={$config['dbname']} --dbuser={$config['dbuser']} --dbpass={$config['dbpass']} --dbhost={$config['dbhost']} --allow-root --path=/var/www/html --extra-php <<'PHP'\n" . $this->extraPhp() . "\nPHP", $this->path);
+        return $docker->runCommand("wp core config --dbname={$config['dbname']} --dbuser={$config['dbuser']} --dbpass={$config['dbpass']} --dbhost={$config['dbhost']} --extra-php <<'PHP'\n" . $this->extraPhp() . "\nPHP", $this->path);
     }
 
     public function extraPhp()

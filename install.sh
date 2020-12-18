@@ -73,7 +73,6 @@ function create_user() {
     chmod 700 /home/megh/.ssh/id_rsa
 
     # Add docker permissions
-    groupadd docker
     usermod -aG docker megh
     chmod 666 /var/run/docker.sock
     systemctl restart docker
